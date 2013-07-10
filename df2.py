@@ -43,37 +43,24 @@ from collections import deque
 
 def main(argv=None):
     
-    # ---------------
-    # Setup interface
-    # ---------------
-    
-    # use command-line arguments if no argv provided in main() function call
-    if argv is None: argv = sys.argv
-    
-    # setup interface
-    parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
-    parser.add_argument("-ifits", required=True, help="FITS file where to search for clumps.")
-    parser.add_argument("-dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. (default: 3*sig_noise)")
-    parser.add_argument("-Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. (default: 3*sig_noise)")
-    parser.add_argument("-Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
-    parser.add_argument("-ofits", help="FITS file where the found clumps will be saved. If exists, will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
-    parser.add_argument("-otext", help="Text file where the found clumps will be saved in human-readable form. If exists, will be overwritten. (default: IFITS with modified extension '.clumps.txt')")
-    
-    # parse args
-    args = parser.parse_args(args=argv[1:])
-
-    
-    # ------------------
-    # Load FITS datacube
-    # ------------------
-
-    # Take data from the first data block (HDU) of input FITS.
-    idata = pyfits.open(args.ifits)[0].data
-
-    # Input FITS must be 3D, i.e. have exactly 3 dimenstions.
-    if idata.ndim != 3:
-        print >>sys.stderr, "Error: Input FITS must contain 3D data, found {ndim}-dimensional data.".format(ndim=idata.ndim)
+    try:
+        
+        # parse arguments: if argv is None, arguments from sys.argv will be parsed
+        args = parse_args(argv)
+        
+        # load FITS datacube
+        idata = load_ifits(args.ifits)
+        
+        # Sort keys of idata array (1-D flattened keys)
+        print "Sorting pixels."
+        skeys1 = idata.argsort(axis=None)[::-1]
+        
+    except (IOError, Error) as err:
+        print >>sys.stderr, err
         return 1
+    
+
+
 
     # --------------------------------
     # Derive parameters not set by CLI
@@ -123,27 +110,7 @@ def main(argv=None):
             print "Setting Tcutoff to {Tcutoff} (= 3*std_noise = 3*{std_noise})".format(Tcutoff=3.*std_noise, std_noise=std_noise)
             args.Tcutoff = 3.*std_noise
 
-    # ----------------
-    # Preprocess idata
-    # ----------------
 
-    """Prepare idata for main clumpfinding loop."""
-
-
-    # (1) Add boundary to idata:
-    #     The boundary is a margin around the original data cube with values
-    #     set to -INF. The boundary pixels will be sorted last and the main
-    #     loop terminates before reaching them. Effectively, this boundary
-    #     assures that all pixels with values > -INF will have their neighbours
-    #     defined without the fear of IndexError.
-    idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
-    idata2[:] = -np.inf
-    idata2[1:-1, 1:-1, 1:-1] = idata
-    idata = idata2
-
-    # (2) Sort keys of idata array (1-D keys)
-    print "Sorting pixels."
-    skeys1 = idata.argsort(axis=None)[::-1]
 
     # -----------------
     # Search for clumps
@@ -347,11 +314,61 @@ def main(argv=None):
 # Functions
 # =========
 
+def parse_args(argv=None):
+    """Parses arguments using argparse module."""
+    
+    # setup parser
+    parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
+    parser.add_argument("-ifits", required=True, help="FITS file where to search for clumps.")
+    parser.add_argument("-dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. (default: 3*sig_noise)")
+    parser.add_argument("-Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. (default: 3*sig_noise)")
+    parser.add_argument("-Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
+    parser.add_argument("-ofits", help="FITS file where the found clumps will be saved. If exists, will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
+    parser.add_argument("-otext", help="Text file where the found clumps will be saved in human-readable form. If exists, will be overwritten. (default: IFITS with modified extension '.clumps.txt')")
+    
+    # parse args
+    args = parser.parse_args(args=argv)
+    
+    # return namespace with parsed arguments
+    return args
 
+
+def load_ifits(ifits):
+    """Loads and preprocess input FITS data."""
+    
+    # Take data from the first data block (HDU) of input FITS.
+    idata = pyfits.open(ifits)[0].data
+
+    # Check if input FITS is 3D, i.e. have exactly 3 dimenstions.
+    if idata.ndim != 3:
+        raise Error("Input FITS must contain 3D data, found {0}-dimensional data.".format(idata.ndim))
+    
+    # Add boundary to idata.
+    # The boundary is a margin around the original data cube with values
+    # set to -inf. The boundary pixels will be sorted last and the main
+    # loop terminates before reaching them. Effectively, this boundary
+    # assures that all pixels with values > -inf will have their neighbours
+    # defined without the fear of IndexError.
+    idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
+    idata2[:] = -np.inf
+    idata2[1:-1, 1:-1, 1:-1] = idata
+    idata = idata2
+    
+    return idata
 
 # =======
 # Classes
 # =======
+
+class Error(Exception):
+    """Standard non-specific runtime error."""
+    
+    def __init__(self, msg):
+        self.msg = msg
+    
+    def __str__(self):
+        return "Error: {0}".format(self.msg)
+
 
 class Clump(object):
     """Clump found within the data cube."""
