@@ -502,28 +502,19 @@ class Clump(object):
                 new_touching.update({exp_clump: touching_at_dval})
         self.touching = new_touching
     
-    def __str__(self):
+    def get_connected(self):
         """
-        Returns textual representation of the clump.
+        Returns clumps connected to this clump.
         
-        The output text is similar to that of the original DENDROFIND and should
-        work with the script for plotting dendrograms (df_dendrogram.py).
+        Connected clumps are all the clumps which either touch a given clump
+        directly or indirectly through other connected clumps.  This structure
+        is used for building the dendrogram.  In other words, connected clumps make
+        up a graph data structure.  We now want to find all the clumps (nodes)
+        connected to a given clump (self) -- i.e. discover the whole graph.
+        
+        Returns: connected -- dict of connected clumps in form {clump: connects_at_dval, ...},
+                              where connects_at_dval is the data value at which the clump connects
         """
-        
-        # compact touching clumps dict first
-        self.compact_touching()
-        
-        # sort touching clumps (order by dval_at_which_they_touch)
-        touching = sorted(self.touching.iteritems(), key=lambda x: x[1], reverse=True)
-        
-        
-        # ------ discover connected clumps ------
-        
-        # Connected clumps are all the clumps which either touch a given clump
-        # directly or indirectly through other connected clumps.  This structure
-        # is used for building the dendrogram.  In other words, connected clumps make
-        # up a graph data structure.  We now want to find all the clumps (nodes)
-        # connected to a given clump -- i.e. discover the whole graph.
         
         # Populate the queue of clumps to explore with clumps from the touching list.
         #   [clump, dval], where dval is the data value at which the clump connects
@@ -556,12 +547,28 @@ class Clump(object):
                     connected.update({exp_child_clump: min_dval})
                 # rediscovered clump
                 else:
-                    # update only if found a "higher" path (with greater minimal dval along it)
+                    # update if found a better/"higher" path (with greater minimal dval along it)
                     if min_dval > connected[exp_child_clump]:
                         connected[exp_child_clump] = min_dval
-                    # no better path
-                    else:
-                        pass
+        
+        return connected
+    
+    def __str__(self):
+        """
+        Returns textual representation of the clump.
+        
+        The output text is similar to that of the original DENDROFIND and should
+        work with the script for plotting dendrograms (df_dendrogram.py).
+        """
+        
+        # compact touching clumps dict first
+        self.compact_touching()
+        
+        # sort touching clumps (order by dval_at_which_they_touch)
+        touching = sorted(self.touching.iteritems(), key=lambda x: x[1], reverse=True)
+        
+        # get connected clumps
+        connected = self.get_connected()
         
         # sort connected & convert to list
         connected = sorted(connected.iteritems(), key=lambda x: x[1], reverse=True)
