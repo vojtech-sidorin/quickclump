@@ -525,7 +525,8 @@ class Clump(object):
         # populate FIFO queue and connected dict from own touching clumps
         # level -- level at which a clump is connected (0 = directly/touching, 1 = via ONE another clump, ...)
         queue = deque([[clump, 0] for clump in self.touching.iterkeys()]) # [[clump, level], ...]
-        connected = {clump: [dval, 0] for clump, dval in self.touching.iteritems() } # dict of connected clumps {clump: [dval, level], ...}
+        #connected = {clump: [dval, 0] for clump, dval in self.touching.iteritems() } # dict of connected clumps {clump: [dval, level], ...}
+        connected = dict(( [clump, [dval, 0]] for clump, dval in self.touching.iteritems() )) # for older Python
         
         # find all connected clumps
         while queue:
