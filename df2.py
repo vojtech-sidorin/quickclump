@@ -55,60 +55,13 @@ def main(argv=None):
         print "Sorting pixels."
         skeys1 = idata.argsort(axis=None)[::-1]
         
+        # derive parameters not set by parser
+        args = none_to_defaults(args, idata)
+        
     except (IOError, Error) as err:
         print >>sys.stderr, err
         return 1
     
-
-
-
-    # --------------------------------
-    # Derive parameters not set by CLI
-    # --------------------------------
-
-    """
-    Derive parameters which cannot be set simply as CLI defaults.
-    """
-
-    # ofits --> ifits with modified extension ".clumps.fits"
-    if args.ofits is None:
-        if   args.ifits[-5:] == ".fits": args.ofits = args.ifits[:-5]+".clumps.fits"
-        elif args.ifits[-4:] == ".fit":  args.ofits = args.ifits[:-4]+".clumps.fit"
-        else:                            args.ofits = args.ifits+".clumps.fits"
-
-    # otext --> ifits with modified extension ".clumps.txt"
-    if args.otext is None:
-        if   args.ifits[-5:] == ".fits": args.otext = args.ifits[:-5]+".clumps.txt"
-        elif args.ifits[-4:] == ".fit":  args.otext = args.ifits[:-4]+".clumps.txt"
-        else:                            args.otext = args.ifits+".clumps.txt"
-
-    # dTleaf and/or Tcutoff --> 3 * sig_noise
-    if (args.dTleaf is None) or (args.Tcutoff is None):
-        
-        print "dTleaf and/or Tcutoff not set. Estimating from input data."
-        
-        # compute data mean and std
-        valid = idata.view(np.ma.MaskedArray)
-        valid.mask = ~np.isfinite(idata)
-        mean_data = valid.mean()
-        std_data = valid.std() # WARNING: Takes memory of ~ 6 times idata size.
-        del valid
-        
-        # compute noise mean and std
-        noise = idata.view(np.ma.MaskedArray)
-        noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
-        mean_noise = noise.mean()
-        std_noise = noise.std() # WARNING: Takes memory of ~ 6 times idata size.
-        del noise
-        
-        # set dTleaf
-        if args.dTleaf is None:
-            print "Setting dTleaf to {dTleaf} (= 3*std_noise = 3*{std_noise})".format(dTleaf=3.*std_noise, std_noise=std_noise)
-            args.dTleaf = 3.*std_noise
-        # set Tcutoff
-        if args.Tcutoff is None:
-            print "Setting Tcutoff to {Tcutoff} (= 3*std_noise = 3*{std_noise})".format(Tcutoff=3.*std_noise, std_noise=std_noise)
-            args.Tcutoff = 3.*std_noise
 
 
 
@@ -355,6 +308,83 @@ def load_ifits(ifits):
     idata = idata2
     
     return idata
+
+
+def none_to_defaults(args, idata):
+    """
+    Derives defaults for None arguments.
+    
+    This function derives default values for arguments which were not set
+    by the user and for which the defaults could not be set as simple defaults
+    by the argument parser.  These arguments are:
+     
+     - ofits
+     - otext
+     - dTleaf
+     - Tcutoff
+    
+    Arguments:
+     
+     - args -- namespace with arguments
+     - idata -- input 3D data array used to derive some parameters
+    
+    Returns:
+     
+     - args -- updated args namespace
+    
+    """
+    
+    assert hasattr(args, "ifits")
+    assert hasattr(args, "ofits")
+    assert hasattr(args, "otext")
+    assert hasattr(args, "dTleaf")
+    assert hasattr(args, "Tcutoff")
+    assert idata.ndim == 3
+
+
+    # ofits --> ifits with modified extension ".clumps.fits"
+    if args.ofits is None:
+        if   args.ifits[-5:] == ".fits": args.ofits = args.ifits[:-5]+".clumps.fits"
+        elif args.ifits[-4:] == ".fit":  args.ofits = args.ifits[:-4]+".clumps.fit"
+        else:                            args.ofits = args.ifits+".clumps.fits"
+
+    # otext --> ifits with modified extension ".clumps.txt"
+    if args.otext is None:
+        if   args.ifits[-5:] == ".fits": args.otext = args.ifits[:-5]+".clumps.txt"
+        elif args.ifits[-4:] == ".fit":  args.otext = args.ifits[:-4]+".clumps.txt"
+        else:                            args.otext = args.ifits+".clumps.txt"
+
+    # dTleaf and/or Tcutoff --> 3 * sig_noise
+    if (args.dTleaf is None) or (args.Tcutoff is None):
+        
+        print "dTleaf and/or Tcutoff not set. Estimating from input data."
+        
+        # compute data mean and std
+        valid = idata.view(np.ma.MaskedArray)
+        valid.mask = ~np.isfinite(idata)
+        mean_data = valid.mean()
+        std_data = valid.std() # WARNING: Takes memory of ~ 6 times idata size.
+        del valid
+        
+        # compute noise mean and std
+        noise = idata.view(np.ma.MaskedArray)
+        noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
+        mean_noise = noise.mean()
+        std_noise = noise.std() # WARNING: Takes memory of ~ 6 times idata size.
+        del noise
+        
+        # set dTleaf
+        if args.dTleaf is None:
+            print "Setting dTleaf to {dTleaf} (= 3*std_noise = 3*{std_noise})".format(dTleaf=3.*std_noise, std_noise=std_noise)
+            args.dTleaf = 3.*std_noise
+        
+        # set Tcutoff
+        if args.Tcutoff is None:
+            print "Setting Tcutoff to {Tcutoff} (= 3*std_noise = 3*{std_noise})".format(Tcutoff=3.*std_noise, std_noise=std_noise)
+            args.Tcutoff = 3.*std_noise
+    
+    return args
+
 
 # =======
 # Classes
