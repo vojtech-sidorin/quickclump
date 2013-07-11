@@ -34,7 +34,6 @@ import os
 import argparse
 import numpy as np
 import pyfits
-from collections import deque
 
 
 # ============
@@ -518,45 +517,54 @@ class Clump(object):
         touching = sorted(self.touching.iteritems(), key=lambda x: x[1], reverse=True)
         
         
-        # ------ discover connected clumps -- connected via another clump(s) ------
+        # ------ discover connected clumps ------
         
-        # Implements breadth-first search algorithm.
+        # Connected clumps are all the clumps which either touch a given clump
+        # directly or indirectly through other connected clumps.  This structure
+        # is used for building the dendrogram.  In other words, connected clumps make
+        # up a graph data structure.  We now want to find all the clumps (nodes)
+        # connected to a given clump -- i.e. discover the whole graph.
         
-        # populate FIFO queue and connected dict from own touching clumps
-        # level -- level at which a clump is connected (0 = directly/touching, 1 = via ONE another clump, ...)
-        queue = deque([[clump, 0] for clump in self.touching.iterkeys()]) # [[clump, level], ...]
-        #connected = {clump: [dval, 0] for clump, dval in self.touching.iteritems() } # dict of connected clumps {clump: [dval, level], ...}
-        connected = dict(( [clump, [dval, 0]] for clump, dval in self.touching.iteritems() )) # for older Python
+        # Populate the queue of clumps to explore with clumps from the touching list.
+        #   [clump, dval], where dval is the data value at which the clump connects
+        queue = [[clump, dval] for clump, dval in self.touching.iteritems()]
         
-        # find all connected clumps
+        # Populate the connected list with clumps in the initial queue.
+        connected = dict(queue)
+        
+        # find all connected clumps (discover the whole graph)
         while queue:
-            next_in_queue = queue.popleft() # FIFO queue
+            next_in_queue = queue.pop() # LIFO queue --> depth-first traversal
             focused_clump = next_in_queue[0]
-            next_level = next_in_queue[1]+1
+            focused_dval = next_in_queue[1]
+            
             assert not focused_clump.merges, "Only expanded clumps are expected in the queue."
-            assert focused_clump is not self, "Clump self shouldn't be in its own queue."
-            for k, v in focused_clump.touching.iteritems():
-                k = k.mergesto() # expand clump
-                if k is self:
-                    # do not add self into queue
-                    continue
-                elif k not in connected:
-                    # connect a newly discovered clump
-                    queue.append([k, next_level])
-                    connected.update({k: [v, next_level]})
-                elif next_level > connected[k][1]:
-                    # clump already connected at lower level
-                    continue
-                elif next_level == connected[k][1]:
-                    # same level, keep connection with higher dval
-                    if v > connected[k][1]:
-                        connected[k][1] = v
+            assert focused_clump is not self, "Clump itself should not be in the queue."
+            
+            for child_clump, child_dval in focused_clump.touching.iteritems():
+                exp_child_clump = child_clump.mergesto() # expand clump
+                
+                # skip self
+                if exp_child_clump is self: continue
+                
+                # get the minimal data value along the path
+                min_dval = min(focused_dval, child_dval)
+                
+                # newly discovered clump
+                if exp_child_clump not in connected:
+                    queue.append([exp_child_clump, min_dval])
+                    connected.update({exp_child_clump: min_dval})
+                # rediscovered clump
                 else:
-                    assert next_level < connected[k][1]
-                    assert False, "This shouldn't happen for breadth-first search."
+                    # update only if found a "higher" path (with greater minimal dval along it)
+                    if min_dval > connected[exp_child_clump]:
+                        connected[exp_child_clump] = min_dval
+                    # no better path
+                    else:
+                        pass
         
         # sort connected & convert to list
-        connected = sorted(connected.iteritems(), key=lambda x: x[1][0], reverse=True)
+        connected = sorted(connected.iteritems(), key=lambda x: x[1], reverse=True)
         
         # generate text_repr to be returned
         text_repr  = "clump: {final_ncl}\n".format(final_ncl=self.final_ncl)
@@ -570,7 +578,7 @@ class Clump(object):
             text_repr += "    {final_ncl} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1])
         text_repr += "  connected:\n"
         for cl in connected:
-            text_repr += "    {final_ncl} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1][0])
+            text_repr += "    {final_ncl} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1])
         
         # return text representation
         return text_repr
