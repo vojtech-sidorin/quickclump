@@ -516,27 +516,25 @@ class Clump(object):
                               where connects_at_dval is the data value at which the clump connects
         """
         
-        # Populate the queue of clumps to explore with clumps from the touching list.
-        #   [clump, dval], where dval is the data value at which the clump connects
-        queue = [[clump, dval] for clump, dval in self.touching.iteritems()]
+        # Init the queue of clumps to explore, start with self.mergesto().
+        # Queue format: [[clump, dval], ...], where dval is the data value at which the clump connects
+        # NOTE: only expanded clumps are expected in the queue
+        queue = [[self.mergesto(), self.mergesto().dpeak]]
         
-        # Populate the connected list with clumps in the initial queue.
+        # Init the connected dict
+        # NOTE: only expanded clumps are expected in the dict
         connected = dict(queue)
         
-        # find all connected clumps (discover the whole graph)
+        # find all connected clumps (discover the whole graph, incl. clump self)
         while queue:
             next_in_queue = queue.pop() # LIFO queue --> depth-first traversal
             focused_clump = next_in_queue[0]
             focused_dval = next_in_queue[1]
             
             assert not focused_clump.merges, "Only expanded clumps are expected in the queue."
-            assert focused_clump is not self, "Clump itself should not be in the queue."
             
             for child_clump, child_dval in focused_clump.touching.iteritems():
                 exp_child_clump = child_clump.mergesto() # expand clump
-                
-                # skip self
-                if exp_child_clump is self: continue
                 
                 # get the minimal data value along the path
                 min_dval = min(focused_dval, child_dval)
@@ -551,6 +549,10 @@ class Clump(object):
                     if min_dval > connected[exp_child_clump]:
                         connected[exp_child_clump] = min_dval
         
+        # remove self.mergesto() from connected
+        del connected[self.mergesto()]
+        
+        # return the connected clumps
         return connected
     
     def __str__(self):
