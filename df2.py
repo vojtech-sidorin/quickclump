@@ -45,123 +45,38 @@ def main(argv=None):
     try:
         
         # parse arguments: if argv is None, arguments from sys.argv will be parsed
-        args = parse_args(argv)
+        options = parse_args(argv)
         
         # load FITS datacube
-        idata = load_ifits(args.ifits)
+        idata = load_ifits(options.ifits)
         
-        # Sort keys of idata array (1-D flattened keys)
-        print "Sorting pixels."
-        skeys1 = idata.argsort(axis=None)[::-1]
+        # derive options not set by args parser
+        options = none_to_defaults(options, idata)
         
-        # derive parameters not set by parser
-        args = none_to_defaults(args, idata)
+        # Init clumps mask: pixels labeled with corresponding clump numbers
+        # NOTE: dtype will be reviewed -- and changed to a smaller int sufficient
+        #       for the number of clumps found -- before writing output FITS.
+        # NOTE: Clumps are first numbered from 0 on, -1 meaning no clump owning the pixel.
+        #       Before writing output FITS and TXT files, during renumbering, clumps will
+        #       be numbered starting from 1, 0 meaning no clump owing the pixel.
+        clmask = np.empty(idata.shape, dtype="int32")
+        clmask[:] = -1
+        
+        # Init list of clumps.
+        clumps = []
+        
+        # Find all clumps
+        print "Finding clumps."
+        find_all_clumps(idata, clmask, clumps, options)
         
     except (IOError, Error) as err:
         print >>sys.stderr, err
         return 1
     
 
-
-
     # -----------------
     # Search for clumps
     # -----------------
-
-    """
-    (docstring to be added here)
-    """
-
-    # Init output array for clumps mask: pixels labeled with corresponding clump's number
-    clmask = np.empty(idata.shape, dtype="int32")
-    clmask[:] = -1
-
-    # Init list of clumps
-    clumps = []
-
-    # Find clumps -- loop over sorted keys of pixels starting at maximum
-    print "Finding clumps."
-    ncl = -1 # current clump label/index
-    assert args.Tcutoff > -np.inf, "Tcutoff must be > -inf." # -inf shouldn't parse through CLI
-    for key1 in skeys1:
-        
-        # get key3 (3-D key)
-        key3 = np.unravel_index(key1, idata.shape)
-        
-        # get data value
-        dval = idata[key3]
-        
-        # continue if NAN
-        if dval is np.nan: continue
-        
-        # terminate if dval < Tcutoff
-        if dval < args.Tcutoff: break
-        
-        # initialize pixel
-        px = Pixel(key3, idata, clmask, clumps)
-        
-        # find neighbours (clumps touching at this pixel)
-        px.update_neighbours()
-        
-        # no neighbour --> new clump
-        if len(px.neighbours) == 0:
-            ncl += 1
-            clumps += [Clump(ncl, px)]
-            clmask[key3] = ncl
-        
-        # one neighbour --> add pixel to it
-        elif len(px.neighbours) == 1:
-            clmask[key3] = px.neighbours[0].ncl
-            px.addto(px.neighbours[0])
-        
-        # more clumps --> merge/connect them
-        else: # len(px.neighbours) > 1
-            
-            # add pixel to the nearest clump which will not be merged
-            # If no neighbour with leaf > dTleaf --> add to the highest
-            px.mergesto = px.neighbours[0]  # start with tallest neighbour
-            px.dist2_min = px.dist2(px.mergesto)
-            for neighbour in (px.neighbours[i] for i in xrange(1, len(px.neighbours))):
-                
-                # neighbours with short leaves -- these can't here changle px.mergesto
-                if neighbour.dpeak-px.dval < args.dTleaf: # ... then final px.mergesto must be now already determined
-                    neighbour.parent = px.mergesto # NOTE: if it had parent, it wouldn't pass the IF above,
-                                                # since it would be already merged (too small leaf)
-                    neighbour.mergeup()
-                
-                # neighbours with high enough leaves -- update px.*
-                else:
-                    # update pixel's dist2
-                    dist2 = px.dist2(neighbour)
-                    if dist2 < px.dist2_min:
-                        px.dist2_min = dist2
-                        px.mergesto = neighbour
-            # add pixel to its clump
-            clmask[key3] = px.mergesto.ncl
-            px.addto(px.mergesto)
-            
-            # update neighbours -- some may have been merged
-            px.update_neighbours()
-            
-            # make all neighbours touching at this pixel
-            for i, neighbour in enumerate(px.neighbours):
-                for other_neighbour in (px.neighbours[j] for j in xrange(i)):
-                    neighbour.update_touching(other_neighbour, px.dval)
-                    other_neighbour.update_touching(neighbour, px.dval)
-            
-            # connect grandparents (applies only if more than 1)
-            px.update_grandparents()
-            gps = px.grandparents
-            for i in xrange(1, len(gps)):
-                gp = gps[i]
-                gp.parent = gps[0]
-                gp.dist2_min = gp.dist2(gp.parent)
-                for j in xrange(i):
-                    dist2 = gp.dist2(gps[j])
-                    if dist2 < gp.dist2_min:
-                        gp.parent = gps[j]
-                        gp.dist2_min = dist2
-
 
     print "Merging/deleting small clumps."
 
@@ -173,10 +88,10 @@ def main(argv=None):
         elif clump.parent == clump:
             # skip solitary clumps
             continue
-        elif clump.Npx < args.Npxmin:
+        elif clump.Npx < options.Npxmin:
             # clump too small --> merge to its parent
             clump.mergeup()
-        elif clump.parent.mergesto().Npx < args.Npxmin:
+        elif clump.parent.mergesto().Npx < options.Npxmin:
             # parent too small --> merge
             clump.mergeup()
 
@@ -191,7 +106,7 @@ def main(argv=None):
             # inherit merger's ncl
             renumber_map.update({clump.ncl: renumber_map[mclump.ncl]})
             clump.final_ncl = renumber_map[mclump.ncl]
-        elif mclump.Npx < args.Npxmin:
+        elif mclump.Npx < options.Npxmin:
             # delete clump
             renumber_map.update({clump.ncl: 0})
             clump.final_ncl = 0
@@ -204,18 +119,16 @@ def main(argv=None):
 
     # Renumber clump mask (clmask)
     print "Renumbering clumps."
-    for key1 in skeys1:
-        cl = clmask.flat[key1]
+    for ijk, cl in np.ndenumerate(clmask):
         if cl in renumber_map:
-            clmask.flat[key1] = renumber_map[cl]
+            clmask[ijk] = renumber_map[cl]
         else:
-            clmask.flat[key1] = 0
+            clmask[ijk] = 0
 
     print "{new_ncl} clumps found.".format(new_ncl=new_ncl)
 
     # Release some memory
     del idata
-    del skeys1
     del renumber_map
 
     # ---------------------------
@@ -235,8 +148,8 @@ def main(argv=None):
         clmask = clmask.astype("int16")
 
     # write FITS
-    if os.path.exists(args.ofits): os.remove(args.ofits)
-    pyfits.writeto(args.ofits, clmask[1:-1,1:-1,1:-1])
+    if os.path.exists(options.ofits): os.remove(options.ofits)
+    pyfits.writeto(options.ofits, clmask[1:-1,1:-1,1:-1])
 
     # ---------------------------
     # Write clumps into text file
@@ -248,10 +161,10 @@ def main(argv=None):
 
     print "Writing output text file."
 
-    with open(args.otext, "w") as f:
+    with open(options.otext, "w") as f:
         # The Nlevels value in the output text file is set to 1000 only to be compatible with the original
         # DENDROFIND's textual output.  It has no real meaning for df2, since df2 doesn't use Nlevels parameter.
-        f.write("# Nlevels = 1000 Tcutoff = {args.Tcutoff} dTleaf = {args.dTleaf} Npxmin = {args.Npxmin}\n".format(args=args))
+        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff} dTleaf = {options.dTleaf} Npxmin = {options.Npxmin}\n".format(options=options))
         
         # output clumps
         for clump in clumps:
@@ -309,52 +222,49 @@ def load_ifits(ifits):
     return idata
 
 
-def none_to_defaults(args, idata):
+def none_to_defaults(options, idata):
     """
-    Derives defaults for None arguments.
+    Derives defaults for None options.
     
-    This function derives default values for arguments which were not set
-    by the user and for which the defaults could not be set as simple defaults
-    by the argument parser.  These arguments are:
+    This function derives default values for options which are not set, presumably
+    because they were not set by the user at the command line and could not be set
+    as simple defaults by the argument parser.  These options/arguments include:
      
-     - ofits
-     - otext
-     - dTleaf
-     - Tcutoff
+    ofits
+    otext
+    dTleaf
+    Tcutoff
     
     Arguments:
-     
-     - args -- namespace with arguments
-     - idata -- input 3D data array used to derive some parameters
+    options -- namespace with options
+    idata -- input 3D data array used to derive some options
     
-    Returns:
-     
-     - args -- updated args namespace
-    
+    Returns: updated options namespace
     """
     
-    assert hasattr(args, "ifits")
-    assert hasattr(args, "ofits")
-    assert hasattr(args, "otext")
-    assert hasattr(args, "dTleaf")
-    assert hasattr(args, "Tcutoff")
+    assert hasattr(options, "ifits")
+    assert hasattr(options, "ofits")
+    assert hasattr(options, "otext")
+    assert hasattr(options, "dTleaf")
+    assert hasattr(options, "Tcutoff")
     assert idata.ndim == 3
-
-
+    
+    new_options = options
+    
     # ofits --> ifits with modified extension ".clumps.fits"
-    if args.ofits is None:
-        if   args.ifits[-5:] == ".fits": args.ofits = args.ifits[:-5]+".clumps.fits"
-        elif args.ifits[-4:] == ".fit":  args.ofits = args.ifits[:-4]+".clumps.fit"
-        else:                            args.ofits = args.ifits+".clumps.fits"
+    if new_options.ofits is None:
+        if   new_options.ifits[-5:] == ".fits": new_options.ofits = new_options.ifits[:-5]+".clumps.fits"
+        elif new_options.ifits[-4:] == ".fit":  new_options.ofits = new_options.ifits[:-4]+".clumps.fit"
+        else:                                   new_options.ofits = new_options.ifits+".clumps.fits"
 
     # otext --> ifits with modified extension ".clumps.txt"
-    if args.otext is None:
-        if   args.ifits[-5:] == ".fits": args.otext = args.ifits[:-5]+".clumps.txt"
-        elif args.ifits[-4:] == ".fit":  args.otext = args.ifits[:-4]+".clumps.txt"
-        else:                            args.otext = args.ifits+".clumps.txt"
+    if new_options.otext is None:
+        if   new_options.ifits[-5:] == ".fits": new_options.otext = new_options.ifits[:-5]+".clumps.txt"
+        elif new_options.ifits[-4:] == ".fit":  new_options.otext = new_options.ifits[:-4]+".clumps.txt"
+        else:                                   new_options.otext = new_options.ifits+".clumps.txt"
 
     # dTleaf and/or Tcutoff --> 3 * sig_noise
-    if (args.dTleaf is None) or (args.Tcutoff is None):
+    if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
         
         print "dTleaf and/or Tcutoff not set. Estimating from input data."
         
@@ -373,16 +283,123 @@ def none_to_defaults(args, idata):
         del noise
         
         # set dTleaf
-        if args.dTleaf is None:
+        if new_options.dTleaf is None:
             print "Setting dTleaf to {dTleaf} (= 3*std_noise = 3*{std_noise})".format(dTleaf=3.*std_noise, std_noise=std_noise)
-            args.dTleaf = 3.*std_noise
+            new_options.dTleaf = 3.*std_noise
         
         # set Tcutoff
-        if args.Tcutoff is None:
+        if new_options.Tcutoff is None:
             print "Setting Tcutoff to {Tcutoff} (= 3*std_noise = 3*{std_noise})".format(Tcutoff=3.*std_noise, std_noise=std_noise)
-            args.Tcutoff = 3.*std_noise
+            new_options.Tcutoff = 3.*std_noise
     
-    return args
+    return new_options
+
+
+def find_all_clumps(idata, clmask, clumps, options):
+    """
+    Finds all clumps in data cube.
+    
+    All means that this function will find also small clumps -- as small
+    as one pixel.  These small clumps are expected to be merged or
+    deleted later by other routines.
+    
+    Arguments:
+    idata -- input 3D data cube
+    clmask -- clump mask (3D array of integers)
+    clumps -- list of found clumps
+    options -- namespace with additional options
+    """
+    
+    assert hasattr(options, "dTleaf")
+    assert hasattr(options, "Tcutoff")
+    assert idata.ndim == 3
+    assert clmask.ndim == 3
+    assert clmask.shape == idata.shape
+    
+    # Sort keys of idata array (1-D flattened keys)
+    skeys1 = idata.argsort(axis=None)[::-1]
+
+    # Find clumps -- loop over sorted keys of pixels starting at maximum
+    ncl = -1 # current clump label/index
+    assert options.Tcutoff > -np.inf, "Tcutoff must be > -inf." # -inf shouldn't parse through CLI
+    for key1 in skeys1:
+        
+        # derive key3 (3-D key)
+        key3 = np.unravel_index(key1, idata.shape)
+        
+        # get data value
+        dval = idata[key3]
+        
+        # continue if NAN
+        if dval is np.nan: continue
+        
+        # terminate if dval < Tcutoff
+        if dval < options.Tcutoff: break
+        
+        # initialize pixel
+        px = Pixel(key3, idata, clmask, clumps)
+        
+        # find neighbours (clumps touching at this pixel)
+        px.update_neighbours()
+        
+        # no neighbour --> new clump
+        if len(px.neighbours) == 0:
+            ncl += 1
+            clumps += [Clump(ncl, px)]
+            clmask[key3] = ncl
+        
+        # one neighbour --> add pixel to it
+        elif len(px.neighbours) == 1:
+            clmask[key3] = px.neighbours[0].ncl
+            px.addto(px.neighbours[0])
+        
+        # more clumps --> merge/connect them
+        else: # len(px.neighbours) > 1
+            
+            # add pixel to the nearest clump which will not be merged
+            # If no neighbour with leaf > dTleaf --> add to the highest
+            px.mergesto = px.neighbours[0]  # start with tallest neighbour
+            px.dist2_min = px.dist2(px.mergesto)
+            for neighbour in (px.neighbours[i] for i in xrange(1, len(px.neighbours))):
+                
+                # neighbours with short leaves -- these can't here changle px.mergesto
+                if neighbour.dpeak-px.dval < options.dTleaf: # ... then final px.mergesto must be now already determined
+                    neighbour.parent = px.mergesto # NOTE: if it had parent, it wouldn't pass the IF above,
+                                                # since it would be already merged (too small leaf)
+                    neighbour.mergeup()
+                
+                # neighbours with high enough leaves -- update px.*
+                else:
+                    # update pixel's dist2
+                    dist2 = px.dist2(neighbour)
+                    if dist2 < px.dist2_min:
+                        px.dist2_min = dist2
+                        px.mergesto = neighbour
+            # add pixel to its clump
+            clmask[key3] = px.mergesto.ncl
+            px.addto(px.mergesto)
+            
+            # update neighbours -- some may have been merged
+            px.update_neighbours()
+            
+            # make all neighbours touching at this pixel
+            for i, neighbour in enumerate(px.neighbours):
+                for other_neighbour in (px.neighbours[j] for j in xrange(i)):
+                    neighbour.update_touching(other_neighbour, px.dval)
+                    other_neighbour.update_touching(neighbour, px.dval)
+            
+            # connect grandparents (applies only if more than 1)
+            px.update_grandparents()
+            gps = px.grandparents
+            for i in xrange(1, len(gps)):
+                gp = gps[i]
+                gp.parent = gps[0]
+                gp.dist2_min = gp.dist2(gp.parent)
+                for j in xrange(i):
+                    dist2 = gp.dist2(gps[j])
+                    if dist2 < gp.dist2_min:
+                        gp.parent = gps[j]
+                        gp.dist2_min = dist2
 
 
 # =======
