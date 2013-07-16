@@ -86,34 +86,14 @@ def main(argv=None):
         print "Writing output FITS."
         write_ofits(options.ofits, clmask, final_clumps_count)
         
+        # write clumps to output text file
+        print "Writing output text file."
+        write_otext(options.otext, clumps, options)
+        
     except (IOError, Error) as err:
         print >>sys.stderr, err
         return 1
 
-
-    # ---------------------------
-    # Write clumps into text file
-    # ---------------------------
-
-    """
-    NOTE: If otext exists it will be overwritten!
-    """
-
-    print "Writing output text file."
-
-    with open(options.otext, "w") as f:
-        # The Nlevels value in the output text file is set to 1000 only to be compatible with the original
-        # DENDROFIND's textual output.  It has no real meaning for df2, since df2 doesn't use Nlevels parameter.
-        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff} dTleaf = {options.dTleaf} Npxmin = {options.Npxmin}\n".format(options=options))
-        
-        # output clumps
-        for clump in clumps:
-            # print only clumps which were not deleted (final_ncl > 0) or merged
-            if (not clump.merges) and (clump.final_ncl > 0):
-                f.write(str(clump))
-                f.write("\n")
-    
-    
 
 # =========
 # Functions
@@ -439,6 +419,30 @@ def write_ofits(ofits, clmask, final_clumps_count):
     # write FITS
     if os.path.exists(ofits): os.remove(ofits)
     pyfits.writeto(ofits, clmask[1:-1,1:-1,1:-1])
+
+
+def write_otext(otext, clumps, options):
+    """
+    Write clumps to output text file.
+    
+    NOTE: If otext file exists, it will be overwritten.
+    """
+    
+    assert hasattr(options, "Tcutoff")
+    assert hasattr(options, "dTleaf")
+    assert hasattr(options, "Npxmin")
+    
+    with open(otext, "w") as f:
+        # The Nlevels value in the output text file is set to 1000 only to be compatible with the original
+        # DENDROFIND's textual output.  It has no real meaning for df2, since df2 doesn't use Nlevels parameter.
+        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff} dTleaf = {options.dTleaf} Npxmin = {options.Npxmin}\n".format(options=options))
+        
+        # output clumps
+        for clump in clumps:
+            # print only clumps which were not deleted (final_ncl > 0) or merged
+            if (not clump.merges) and (clump.final_ncl > 0):
+                f.write(str(clump))
+                f.write("\n")
 
 
 # =======
