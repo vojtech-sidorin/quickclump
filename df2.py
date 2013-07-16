@@ -62,38 +62,21 @@ def main(argv=None):
         clmask = np.empty(idata.shape, dtype="int32")
         clmask[:] = -1
         
-        # Init list of clumps.
+        # init list of clumps
         clumps = []
         
         # Find all clumps
         print "Finding clumps."
         find_all_clumps(idata, clmask, clumps, options)
         
+        # merge small clumps
+        print "Merging too small clumps."
+        merge_small_clumps(clumps, options.Npxmin)
+        
     except (IOError, Error) as err:
         print >>sys.stderr, err
         return 1
     
-
-    # -----------------
-    # Search for clumps
-    # -----------------
-
-    print "Merging/deleting small clumps."
-
-    # Merge small clumps -- start from bottom (shortest clumps first)
-    for clump in (clumps[i] for i in xrange(len(clumps)-1, -1, -1)):
-        if clump.merges:
-            # skip already merged clumps
-            continue
-        elif clump.parent == clump:
-            # skip solitary clumps
-            continue
-        elif clump.Npx < options.Npxmin:
-            # clump too small --> merge to its parent
-            clump.mergeup()
-        elif clump.parent.mergesto().Npx < options.Npxmin:
-            # parent too small --> merge
-            clump.mergeup()
 
     # Build renumber map (small clumps will be renumbered 0 = deleted)
     # and set clumps' final_ncl
@@ -400,6 +383,34 @@ def find_all_clumps(idata, clmask, clumps, options):
                     if dist2 < gp.dist2_min:
                         gp.parent = gps[j]
                         gp.dist2_min = dist2
+
+
+def merge_small_clumps(clumps, Npxmin):
+    """
+    Merges clumps with too little pixels.
+    
+    Clumps with too little pixels (< Npxmin) will be merged to their parents.
+    Clumps will also be merged, if their parents have too little pixels.
+    Merging starts from "bottom", i.e. clumps with the lowest dpeak values will
+    be processed first.
+    """
+    
+    for clump in (clumps[i] for i in xrange(len(clumps)-1, -1, -1)):
+        # already merged --> skip
+        if clump.merges:
+            continue
+        
+        # solitary clump --> skip
+        elif clump.parent is clump:
+            continue
+        
+        # too small clump --> merge to its parent
+        elif clump.Npx < Npxmin:
+            clump.mergeup()
+        
+        # too small parent --> merge clump to it
+        elif clump.parent.mergesto().Npx < Npxmin:
+            clump.mergeup()
 
 
 # =======
