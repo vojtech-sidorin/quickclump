@@ -80,34 +80,16 @@ def main(argv=None):
         renumber_clumps(clumps, options.Npxmin)
         final_clumps_count = renumber_clumps.last_new_ncl
         renumber_clmask(clmask, clumps)
+        print "{0} clumps found.".format(final_clumps_count)
+        
+        # write clmask to output FITS
+        print "Writing output FITS."
+        write_ofits(options.ofits, clmask, final_clumps_count)
         
     except (IOError, Error) as err:
         print >>sys.stderr, err
         return 1
-    
 
-    print "{0} clumps found.".format(final_clumps_count)
-
-
-    # ---------------------------
-    # Write clmask to output FITS
-    # ---------------------------
-
-    """
-    NOTE: If ofits exists it will be overwritten!
-    """
-
-    print "Writing output FITS."
-
-    # reduce size of clmask if possible
-    if final_clumps_count <= np.iinfo("uint8").max:
-        clmask = clmask.astype("uint8")
-    elif final_clumps_count <= np.iinfo("int16").max:
-        clmask = clmask.astype("int16")
-
-    # write FITS
-    if os.path.exists(options.ofits): os.remove(options.ofits)
-    pyfits.writeto(options.ofits, clmask[1:-1,1:-1,1:-1])
 
     # ---------------------------
     # Write clumps into text file
@@ -439,6 +421,24 @@ def renumber_clmask(clmask, clumps):
             clmask[ijk] = clumps[ncl].final_ncl
         except KeyError:
             clmask[ijk] = 0
+
+
+def write_ofits(ofits, clmask, final_clumps_count):
+    """
+    Writes clmask to output FITS file.
+    
+    NOTE: If ofits exists it will be overwritten.
+    """
+
+    # reduce size of clmask if possible
+    if final_clumps_count <= np.iinfo("uint8").max:
+        clmask = clmask.astype("uint8")
+    elif final_clumps_count <= np.iinfo("int16").max:
+        clmask = clmask.astype("int16")
+
+    # write FITS
+    if os.path.exists(ofits): os.remove(ofits)
+    pyfits.writeto(ofits, clmask[1:-1,1:-1,1:-1])
 
 
 # =======
