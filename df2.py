@@ -70,49 +70,26 @@ def main(argv=None):
         find_all_clumps(idata, clmask, clumps, options)
         
         # merge small clumps
-        print "Merging too small clumps."
+        print "Merging small clumps."
         merge_small_clumps(clumps, options.Npxmin)
+        
+        # renumber clumps and clmask
+        # NOTE: Clumps will be renumbered starting from 1 on.
+        # NOTE: Clumps with Npx < Npxmin will be deleted = renumbered to 0.
+        print "Renumbering clumps."
+        renumber_clumps(clumps, options.Npxmin)
+        final_clump_count = renumber_clumps.last_new_ncl
+        renumber_clmask(clmask, clumps)
         
     except (IOError, Error) as err:
         print >>sys.stderr, err
         return 1
     
 
-    # Build renumber map (small clumps will be renumbered 0 = deleted)
-    # and set clumps' final_ncl
-    renumber_map = {} # {old_ncl: new_ncl}
-    new_ncl = 0
-    for clump in clumps:
-        assert clump.ncl not in renumber_map
-        mclump = clump.mergesto()
-        if mclump.ncl in renumber_map:
-            # inherit merger's ncl
-            renumber_map.update({clump.ncl: renumber_map[mclump.ncl]})
-            clump.final_ncl = renumber_map[mclump.ncl]
-        elif mclump.Npx < options.Npxmin:
-            # delete clump
-            renumber_map.update({clump.ncl: 0})
-            clump.final_ncl = 0
-        else:
-            # set new_ncl
-            assert clump is mclump
-            new_ncl += 1
-            renumber_map.update({clump.ncl: new_ncl})
-            clump.final_ncl = new_ncl
-
-    # Renumber clump mask (clmask)
-    print "Renumbering clumps."
-    for ijk, cl in np.ndenumerate(clmask):
-        if cl in renumber_map:
-            clmask[ijk] = renumber_map[cl]
-        else:
-            clmask[ijk] = 0
-
-    print "{new_ncl} clumps found.".format(new_ncl=new_ncl)
+    print "{0} clumps found.".format(final_clump_count)
 
     # Release some memory
     del idata
-    del renumber_map
 
     # ---------------------------
     # Write clmask to output FITS
@@ -125,9 +102,9 @@ def main(argv=None):
     print "Writing output FITS."
 
     # reduce size of clmask if possible
-    if new_ncl <= np.iinfo("uint8").max:
+    if final_clump_count <= np.iinfo("uint8").max:
         clmask = clmask.astype("uint8")
-    elif new_ncl <= np.iinfo("int16").max:
+    elif final_clump_count <= np.iinfo("int16").max:
         clmask = clmask.astype("int16")
 
     # write FITS
@@ -413,6 +390,52 @@ def merge_small_clumps(clumps, Npxmin):
             clump.mergeup()
 
 
+def renumber_clumps(clumps, Npxmin):
+    """
+    Renumbers clumps taking into account mergers and Npxmin limit.
+    
+    Sets clumps' final_ncl so that:
+      (1) The numbering starts from 1.
+      (2) Merged clumps are renumbered according to the final_ncl of the clump to which they merge.
+          This is consistent, since clumps are expected to merge only to clumps with lower ncl, which
+          are renumbered prior to the merging clump.
+      (3) Solitary clumps with too little pixels (< Npxmin) are "deleted":  final_ncl is set to 0.
+    
+    The final count of clumps after renumbering can be retrieved from outside of the function
+    through the function's attribute 'last_new_ncl'.
+    """
+    
+    new_ncl = 0
+    for clump in clumps:
+        # clump merges --> use final_ncl of mergesto() clump
+        if clump.merges:
+            exp_clump = clump.mergesto()
+            assert exp_clump.ncl < clump.ncl, "Clumps should merge only to clumps with lower ncl."
+            clump.final_ncl = exp_clump.final_ncl
+        
+        # too small clump --> "delete"/renumber to 0
+        elif clump.Npx < Npxmin:
+            clump.final_ncl = 0
+        
+        # assign new clump number
+        else:
+            new_ncl += 1
+            clump.final_ncl = new_ncl
+    
+    # save the last new_ncl (for retrieving from outside)
+    renumber_clumps.last_new_ncl = new_ncl
+
+
+def renumber_clmask(clmask, clumps):
+    """Renumbers clmask according to clumps' final_ncl."""
+    
+    for ijk, ncl in np.ndenumerate(clmask):
+        try:
+            clmask[ijk] = clumps[ncl].final_ncl
+        except KeyError:
+            clmask[ijk] = 0
+
+
 # =======
 # Classes
 # =======
@@ -439,7 +462,7 @@ class Clump(object):
         """
         
         self.ncl = ncl         # label
-        self.final_ncl = ncl   # final clump label to be reset during renumbering
+        self.final_ncl = None  # final clump label to be set during renumbering
         self.Npx = 1           # number of pixels (incl. pixels of clumps which merge to this clump)
         self.parent = self     # parent to which the clump is connected (the nearest clump with
                                # higher dpeak touching this clump)
@@ -525,7 +548,7 @@ class Clump(object):
         new_touching = {}
         for clump, touching_at_dval in self.touching.iteritems():
             exp_clump = clump.mergesto() # expand touched clump
-            if exp_clump.final_ncl < 1: continue # ditch deleted clumps (with final_ncl == 0)
+            if exp_clump.final_ncl == 0: continue # ditch deleted clumps (with final_ncl == 0)
             if (exp_clump not in new_touching) or (touching_at_dval > new_touching[exp_clump]):
                 new_touching.update({exp_clump: touching_at_dval})
         self.touching = new_touching
