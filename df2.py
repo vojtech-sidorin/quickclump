@@ -48,7 +48,7 @@ def main(argv=None):
         options = parse_args(argv)
         
         # load FITS datacube
-        idata = load_ifits(options.ifits)
+        ifits_header, idata = load_ifits(options.ifits)
         
         # derive options not set by args parser
         options = none_to_defaults(options, idata)
@@ -78,7 +78,7 @@ def main(argv=None):
         # NOTE: Clumps with Npx < Npxmin will be deleted = renumbered to 0.
         print "Renumbering clumps."
         renumber_clumps(clumps, options.Npxmin)
-        final_clump_count = renumber_clumps.last_new_ncl
+        final_clumps_count = renumber_clumps.last_new_ncl
         renumber_clmask(clmask, clumps)
         
     except (IOError, Error) as err:
@@ -86,10 +86,8 @@ def main(argv=None):
         return 1
     
 
-    print "{0} clumps found.".format(final_clump_count)
+    print "{0} clumps found.".format(final_clumps_count)
 
-    # Release some memory
-    del idata
 
     # ---------------------------
     # Write clmask to output FITS
@@ -102,9 +100,9 @@ def main(argv=None):
     print "Writing output FITS."
 
     # reduce size of clmask if possible
-    if final_clump_count <= np.iinfo("uint8").max:
+    if final_clumps_count <= np.iinfo("uint8").max:
         clmask = clmask.astype("uint8")
-    elif final_clump_count <= np.iinfo("int16").max:
+    elif final_clumps_count <= np.iinfo("int16").max:
         clmask = clmask.astype("int16")
 
     # write FITS
@@ -159,27 +157,34 @@ def parse_args(argv=None):
 
 
 def load_ifits(ifits):
-    """Loads and preprocess input FITS data."""
+    """
+    Loads and preprocess input FITS data.
     
-    # Take data from the first data block (HDU) of input FITS.
-    idata = pyfits.open(ifits)[0].data
-
+    Returns ifits header and preprocessed idata.
+    """
+    
+    # Open ifits
+    hdulist = pyfits.open(ifits)
+    
+    # Use first HDU (HDU = header data unit)
+    idata, iheader = hdulist[0].data, hdulist[0].header
+    
     # Check if input FITS is 3D, i.e. have exactly 3 dimenstions.
     if idata.ndim != 3:
-        raise Error("Input FITS must contain 3D data, found {0}-dimensional data.".format(idata.ndim))
+        raise Error("Input FITS must contain 3D data (in the first HDU), found {0}-dimensional data.".format(idata.ndim))
     
     # Add boundary to idata.
     # The boundary is a margin around the original data cube with values
-    # set to -inf. The boundary pixels will be sorted last and the main
-    # loop terminates before reaching them. Effectively, this boundary
-    # assures that all pixels with values > -inf will have their neighbours
-    # defined without the fear of IndexError.
+    # set to -inf.  The boundary pixels will be sorted last and the loop over
+    # them is expected to terminate before reaching them.  This ensures that
+    # all pixels with values > -inf will have their neighbours defined without
+    # the fear of IndexError.
     idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
     idata2[:] = -np.inf
     idata2[1:-1, 1:-1, 1:-1] = idata
     idata = idata2
     
-    return idata
+    return iheader, idata
 
 
 def none_to_defaults(options, idata):
