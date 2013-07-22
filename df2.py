@@ -35,6 +35,7 @@ import argparse
 import numpy as np
 import pyfits
 
+__version__ = "0.1-devel"
 
 # ============
 # Main program
@@ -102,8 +103,11 @@ def main(argv=None):
 def parse_args(argv=None):
     """Parses arguments using argparse module."""
     
+    global __version__
+    
     # setup parser
     parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
+    parser.add_argument("-version", action="version", version=__version__)
     parser.add_argument("-ifits", required=True, help="FITS file where to search for clumps.")
     parser.add_argument("-dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. (default: 3*sig_noise)")
     parser.add_argument("-Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. (default: 3*sig_noise)")
