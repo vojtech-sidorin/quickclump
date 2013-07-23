@@ -289,7 +289,7 @@ def find_all_clumps(idata, clmask, clumps, options):
             # If no neighbour with leaf > dTleaf --> add to the highest
             px.mergesto = px.neighbours[0]  # start with tallest neighbour
             px.dist2_min = px.dist2(px.mergesto)
-            for neighbour in (px.neighbours[i] for i in xrange(1, len(px.neighbours))):
+            for neighbour in px.neighbours[1:]:
                 
                 # neighbours with short leaves -- these can't here changle px.mergesto
                 if neighbour.dpeak-px.dval < options.dTleaf: # ... then final px.mergesto must be now already determined
@@ -313,7 +313,7 @@ def find_all_clumps(idata, clmask, clumps, options):
             
             # make all neighbours touching at this pixel
             for i, neighbour in enumerate(px.neighbours):
-                for other_neighbour in (px.neighbours[j] for j in xrange(i)):
+                for other_neighbour in px.neighbours[:i]:
                     neighbour.update_touching(other_neighbour, px.dval)
                     other_neighbour.update_touching(neighbour, px.dval)
             
