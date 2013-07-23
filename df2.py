@@ -454,7 +454,11 @@ def write_otext(otext, clumps, options):
 # =======
 
 class Error(Exception):
-    """Standard non-specific runtime error."""
+    """Standard non-specific runtime error.
+    
+    This exception is intended as a correct and single exit point for main()
+    in the case an anticipated error occurs.
+    """
     
     def __init__(self, msg):
         self.msg = msg
@@ -467,8 +471,7 @@ class Clump(object):
     """Clump found within the data cube."""
     
     def __init__(self, ncl, px):
-        """
-        Build a new clump.
+        """Build a new clump.
         
         ncl -- number/label for this new clump
         px  -- the first pixel of the clump (peak)
@@ -481,9 +484,8 @@ class Clump(object):
                                # higher dpeak touching this clump)
         self.merges = False    # whether the clump merges to its parent
         self.touching = {}     # dictionary of other clumps which touch this one: {clump_reference: dval_at_which_they_touch}
-        self.xyz = px.xyz      # (x,y,z) coordinates: the weighted average with
-                               # the weight equal to pixels' data values. Note that xyz
-                               # changes as new pixels are being added to the clump.
+        self.xyz = px.xyz      # (x,y,z) coordinates: the weighted average with the weight equal to pixels'
+                               # data values. Note xyz changes as new pixels are being added to the clump.
         self.wxyz = px.dval    # weight of clump's xyz coordinates
         self.dpeak = px.dval   # peak data value
         self.sumd = px.dval    # sum of clumps data values (sum of all pixels' dval)
@@ -501,20 +503,16 @@ class Clump(object):
         return sum( (self.xyz-other.xyz)**2 )
     
     def mergeup(self):
-        """
-        Merges clump to its true parent.
+        """Merges clump to its true parent.
         
-        The parent is expanded, i.e., the clump is merged to
-        self.parent.mergesto().
+        The parent is expanded, i.e., the clump is merged to self.parent.mergesto().
         """
         
-        # assert clump not merged yet
         assert not self.merges, "Attempt to merge already merged clump."
         
         # get the clump to which merge
         mergeto = self.parent.mergesto()
         
-        # assert not merging to itself
         assert mergeto is not self, "Attempt to merge clump to itself."
         
         # ------ merge ------
@@ -534,8 +532,7 @@ class Clump(object):
         self.merges = True
      
     def update_touching(self, other, dval):
-        """
-        Updates dict of clumps which touch this clump.
+        """Updates dict of clumps which touch this clump.
         
         Clump "other" is expanded to other.mergesto().
         dval is the data value of the pixel which connects clumps "self" and "other".
@@ -550,8 +547,7 @@ class Clump(object):
                 self.touching.update({exp_other: dval})
     
     def compact_touching(self):
-        """
-        Compacts touching dict.
+        """Compacts touching dict.
         
         (1) Removes references to deleted clumps (with final_ncl == 0).
         (2) Ensures the touching dict is unique (solving mergers).  If more references to
@@ -567,8 +563,7 @@ class Clump(object):
         self.touching = new_touching
     
     def get_connected(self):
-        """
-        Returns clumps connected to this clump.
+        """Returns clumps connected to this clump.
         
         Connected clumps are all the clumps which either touch a given clump
         directly or indirectly through other connected clumps.  This structure
@@ -616,14 +611,12 @@ class Clump(object):
         # remove self.mergesto() from connected
         del connected[self.mergesto()]
         
-        # return the connected clumps
         return connected
     
     def __str__(self):
-        """
-        Returns textual representation of the clump.
+        """Returns textual representation of the clump.
         
-        The output text is similar to that of the original DENDROFIND and should
+        The output text is compatible with the original dendrofind's textual output and should
         work with the script for plotting dendrograms (df_dendrogram.py).
         """
         
@@ -633,10 +626,8 @@ class Clump(object):
         # sort touching clumps (order by dval_at_which_they_touch)
         touching = sorted(self.touching.iteritems(), key=lambda x: x[1], reverse=True)
         
-        # get connected clumps
+        # get connected clumps, sort them (by dval_at_which_they_connect) and convert to list
         connected = self.get_connected()
-        
-        # sort connected & convert to list
         connected = sorted(connected.iteritems(), key=lambda x: x[1], reverse=True)
         
         # generate text_repr to be returned
@@ -653,7 +644,6 @@ class Clump(object):
         for cl in connected:
             text_repr += "    {final_ncl} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1])
         
-        # return text representation
         return text_repr
 
 
@@ -672,7 +662,7 @@ class Pixel(object):
         self.ijk = np.array(ijk, dtype=int)   # (i,j,k) coordinates
         self.xyz = np.array(ijk, dtype=float) # (x,y,z) coordinates
         self.idata = idata                    # input data cube
-        self.clmask = clmask                  # pixels' mask (to which clump they belongs)
+        self.clmask = clmask                  # pixels' mask (to which clump the pixels belong)
         self.clumps = clumps                  # list of clumps
         self.dval = idata[tuple(self.ijk)]    # data value
         self.neighbours = []                  # neighbouring clumps
