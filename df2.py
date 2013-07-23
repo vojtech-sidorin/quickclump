@@ -55,13 +55,16 @@ def main(argv=None):
         options = none_to_defaults(options, idata)
         
         # Init clumps mask: pixels labeled with corresponding clump numbers
-        # NOTE: dtype will be reviewed -- and changed to a smaller int sufficient
-        #       for the number of clumps found -- before writing output FITS.
-        # NOTE: Clumps are first numbered from 0 on, -1 meaning no clump owning the pixel.
-        #       Before writing output FITS and TXT files, during renumbering, clumps will
-        #       be numbered starting from 1, 0 meaning no clump owing the pixel.
         clmask = np.empty(idata.shape, dtype="int32")
         clmask[:] = -1
+        """
+        NOTE: dtype will be reviewed -- and changed to a smaller int sufficient for
+              the number of clumps found -- before writing output FITS.
+        NOTE: Clumps are first numbered from 0 on, -1 meaning no clump owning the pixel.
+              Before writing the output FITS and TXT file, during renumbering, clumps will
+              be numbered starting from 1, 0 meaning no clump owning the pixel.  This
+              second (final) numbering will be stored in clumps' attribute final_ncl.
+        """
         
         # init list of clumps
         clumps = []
@@ -75,13 +78,15 @@ def main(argv=None):
         merge_small_clumps(clumps, options.Npxmin)
         
         # renumber clumps and clmask
-        # NOTE: Clumps will be renumbered starting from 1 on.
-        # NOTE: Clumps with Npx < Npxmin will be deleted = renumbered to 0.
         print "Renumbering clumps."
         renumber_clumps(clumps, options.Npxmin)
         final_clumps_count = renumber_clumps.last_new_ncl
         renumber_clmask(clmask, clumps)
         print "{0} clumps found.".format(final_clumps_count)
+        """
+        NOTE: Clumps have now set their final_ncl attribute, which goes from 1 on.
+        NOTE: Clumps with Npx < Npxmin have their final_ncl set to 0.
+        """
         
         # write clmask to output FITS
         print "Writing output FITS."
@@ -121,52 +126,47 @@ def parse_args(argv=None):
 
 
 def load_ifits(ifits):
-    """
-    Loads and preprocess input FITS data.
+    """Loads and preprocess input FITS data.
     
     Returns ifits header and preprocessed idata.
     """
     
-    # Open ifits
+    # Load first HDU (HDU = header data unit)
     hdulist = pyfits.open(ifits)
+    idata   = hdulist[0].data
+    iheader = hdulist[0].header
     
-    # Use first HDU (HDU = header data unit)
-    idata, iheader = hdulist[0].data, hdulist[0].header
-    
-    # Check if input FITS is 3D, i.e. have exactly 3 dimenstions.
+    # Check if idata is 3D, i.e. has exactly 3 dimenstions.
     if idata.ndim != 3:
         raise Error("Input FITS must contain 3D data (in the first HDU), found {0}-dimensional data.".format(idata.ndim))
     
     # Add boundary to idata.
-    # The boundary is a margin around the original data cube with values
-    # set to -inf.  The boundary pixels will be sorted last and the loop over
-    # them is expected to terminate before reaching them.  This ensures that
-    # all pixels with values > -inf will have their neighbours defined without
-    # the fear of IndexError.
     idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
     idata2[:] = -np.inf
     idata2[1:-1, 1:-1, 1:-1] = idata
     idata = idata2
+    """
+    The boundary is a margin around the original data cube with values
+    set to -inf.  The boundary pixels will be sorted last and the loop over
+    them is expected to terminate before reaching them.  This ensures that
+    all pixels with values > -inf will have their neighbours defined without
+    the fear of IndexError.
+    """
     
     return iheader, idata
 
 
 def none_to_defaults(options, idata):
-    """
-    Derives defaults for None options.
+    """Derives defaults for None options.
     
     This function derives default values for options which are not set, presumably
-    because they were not set by the user at the command line and could not be set
+    because they were not set by the user at the command line, and could not be set
     as simple defaults by the argument parser.  These options/arguments include:
      
-    ofits
-    otext
-    dTleaf
-    Tcutoff
-    
-    Arguments:
-    options -- namespace with options
-    idata -- input 3D data array used to derive some options
+     - ofits   (derived from ifits)
+     - otext   (derived from ifits)
+     - dTleaf  (derived from idata)
+     - Tcutoff (derived from idata)
     
     Returns: updated options namespace
     """
@@ -332,8 +332,7 @@ def find_all_clumps(idata, clmask, clumps, options):
 
 
 def merge_small_clumps(clumps, Npxmin):
-    """
-    Merges clumps with too little pixels.
+    """Merges clumps with too little pixels.
     
     Clumps with too little pixels (< Npxmin) will be merged to their parents.
     Clumps will also be merged, if their parents have too little pixels.
@@ -346,7 +345,7 @@ def merge_small_clumps(clumps, Npxmin):
         if clump.merges:
             continue
         
-        # solitary clump --> skip
+        # solitary/orphan clump --> skip
         elif clump.parent is clump:
             continue
         
@@ -360,8 +359,7 @@ def merge_small_clumps(clumps, Npxmin):
 
 
 def renumber_clumps(clumps, Npxmin):
-    """
-    Renumbers clumps taking into account mergers and Npxmin limit.
+    """Renumbers clumps taking into account mergers and Npxmin limit.
     
     Sets clumps' final_ncl so that:
       (1) The numbering starts from 1.
@@ -370,7 +368,7 @@ def renumber_clumps(clumps, Npxmin):
           are renumbered prior to the merging clump.
       (3) Solitary clumps with too little pixels (< Npxmin) are "deleted":  final_ncl is set to 0.
     
-    The final count of clumps after renumbering can be retrieved from outside of the function
+    The final count of clumps after renumbering can be retrieved from outside of this function
     through the function's attribute 'last_new_ncl'.
     """
     
@@ -406,10 +404,9 @@ def renumber_clmask(clmask, clumps):
 
 
 def write_ofits(ofits, clmask, final_clumps_count):
-    """
-    Writes clmask to output FITS file.
+    """Writes clmask to output FITS file.
     
-    NOTE: If ofits exists it will be overwritten.
+    If ofits exists it will be overwritten.
     """
 
     # reduce size of clmask if possible
@@ -420,14 +417,17 @@ def write_ofits(ofits, clmask, final_clumps_count):
 
     # write FITS
     if os.path.exists(ofits): os.remove(ofits)
-    pyfits.writeto(ofits, clmask[1:-1,1:-1,1:-1])
+    pyfits.writeto(ofits, clmask[1:-1,1:-1,1:-1]) # strip clmask's boundary
 
 
 def write_otext(otext, clumps, options):
-    """
-    Write clumps to output text file.
+    """Write clumps to output text file.
     
-    NOTE: If otext file exists, it will be overwritten.
+    The output text file is an ASCII file compatible with the original dendrofind
+    textual output and as such can be used by supportive dendrofind scripts, e.g.
+    df_dendrogram.py for plotting the dendrogram.
+    
+    If otext file exists, it will be overwritten.
     """
     
     assert hasattr(options, "Tcutoff")
@@ -435,10 +435,12 @@ def write_otext(otext, clumps, options):
     assert hasattr(options, "Npxmin")
     
     with open(otext, "w") as f:
-        # The Nlevels value in the output text file is set to 1000 only to be compatible with the original
-        # DENDROFIND's textual output.  It has no real meaning for df2, since df2 doesn't use Nlevels parameter.
         f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff} dTleaf = {options.dTleaf} Npxmin = {options.Npxmin}\n".format(options=options))
-        
+        """
+        The Nlevels value is set to 1000 only for the output to be compatible with the original dendrofind's
+        textual output.  It has no real meaning for df2, since df2 doesn't use Nlevels parameter.
+        """
+
         # output clumps
         for clump in clumps:
             # print only clumps which were not deleted (final_ncl > 0) or merged
