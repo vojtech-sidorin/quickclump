@@ -103,8 +103,6 @@ def main(argv=None):
 def parse_args(argv=None):
     """Parses arguments using argparse module."""
     
-    global __version__
-    
     # setup parser
     parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
     parser.add_argument("-version", action="version", version=__version__)
