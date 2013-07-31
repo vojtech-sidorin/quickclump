@@ -295,7 +295,7 @@ def find_all_clumps(idata, clmask, clumps, options):
                 if neighbour.dpeak-px.dval < options.dTleaf: # ... then final px.mergesto must be now already determined
                     neighbour.parent = px.mergesto # NOTE: if it had parent, it wouldn't pass the IF above,
                                                 # since it would be already merged (too small leaf)
-                    neighbour.mergeup()
+                    neighbour.merge_to_parent()
                 
                 # neighbours with high enough leaves -- update px.*
                 else:
@@ -347,11 +347,11 @@ def merge_small_clumps(clumps, Npxmin):
         
         # too small clump --> merge to its parent
         elif clump.Npx < Npxmin:
-            clump.mergeup()
+            clump.merge_to_parent()
         
         # too small parent --> merge clump to it
-        elif clump.parent.mergesto().Npx < Npxmin:
-            clump.mergeup()
+        elif clump.parent.get_merger().Npx < Npxmin:
+            clump.merge_to_parent()
 
 
 def renumber_clumps(clumps, Npxmin):
@@ -370,9 +370,9 @@ def renumber_clumps(clumps, Npxmin):
     
     new_ncl = 0
     for clump in clumps:
-        # clump merges --> use final_ncl of mergesto() clump
+        # clump merges --> use final_ncl of get_merger() clump
         if clump.merges:
-            exp_clump = clump.mergesto()
+            exp_clump = clump.get_merger()
             assert exp_clump.ncl < clump.ncl, "Clumps should merge only to clumps with lower ncl."
             clump.final_ncl = exp_clump.final_ncl
         
@@ -486,43 +486,43 @@ class Clump(object):
         self.dpeak = px.dval   # peak data value
         self.sumd = px.dval    # sum of clumps data values (sum of all pixels' dval)
     
-    def mergesto(self):
+    def get_merger(self):
         """Returns clump to which this clump merges or self."""
-        return self.parent.mergesto() if self.merges else self
+        return self.parent.get_merger() if self.merges else self
     
-    def grandparent(self):
+    def get_grandparent(self):
         """Returns parent's parent's... parent or self."""
-        return self.parent.grandparent() if self.parent is not self else self
+        return self.parent.get_grandparent() if self.parent is not self else self
     
     def dist2(self, other):
         """Returns square of the distance of the clump to other clump or pixel."""
         return sum( (self.xyz-other.xyz)**2 )
     
-    def mergeup(self):
-        """Merges clump to its true parent.
+    def merge_to_parent(self):
+        """Merges clump to its parent.
         
-        The parent is expanded, i.e., the clump is merged to self.parent.mergesto().
+        The parent is expanded, i.e., the clump is merged to self.parent.get_merger().
         """
         
         assert not self.merges, "Attempt to merge already merged clump."
         
         # get the clump to which merge
-        mergeto = self.parent.mergesto()
+        merger = self.parent.get_merger()
         
-        assert mergeto is not self, "Attempt to merge clump to itself."
+        assert merger is not self, "Attempt to merge clump to itself."
         
         # ------ merge ------
         # update pixel count
-        mergeto.Npx += self.Npx
+        merger.Npx += self.Npx
         
         # update xyz
-        mergeto.xyz = (self.wxyz*self.xyz + mergeto.wxyz*mergeto.xyz)/(self.wxyz + mergeto.wxyz)
-        mergeto.wxyz += self.wxyz
-        mergeto.sumd += self.sumd
+        merger.xyz = (self.wxyz*self.xyz + merger.wxyz*merger.xyz)/(self.wxyz + merger.wxyz)
+        merger.wxyz += self.wxyz
+        merger.sumd += self.sumd
         
         # update touching
         for clump, touching_at_dval in self.touching.iteritems():
-            mergeto.update_touching(clump, touching_at_dval)
+            merger.update_touching(clump, touching_at_dval)
         
         # set merges tag
         self.merges = True
@@ -530,12 +530,12 @@ class Clump(object):
     def update_touching(self, other, dval):
         """Updates dict of clumps which touch this clump.
         
-        Clump "other" is expanded to other.mergesto().
+        Clump "other" is expanded to other.get_merger().
         dval is the data value of the pixel which connects clumps "self" and "other".
         """
         
         # expand other
-        exp_other = other.mergesto()
+        exp_other = other.get_merger()
         
         # update touching dict
         if exp_other is not self:
@@ -552,7 +552,7 @@ class Clump(object):
         
         new_touching = {}
         for clump, touching_at_dval in self.touching.iteritems():
-            exp_clump = clump.mergesto() # expand touched clump
+            exp_clump = clump.get_merger() # expand touched clump
             if exp_clump.final_ncl == 0: continue # ditch deleted clumps (with final_ncl == 0)
             if (exp_clump not in new_touching) or (touching_at_dval > new_touching[exp_clump]):
                 new_touching.update({exp_clump: touching_at_dval})
@@ -571,10 +571,10 @@ class Clump(object):
                               where connects_at_dval is the data value at which the clump connects
         """
         
-        # Init the queue of clumps to explore, start with self.mergesto().
+        # Init the queue of clumps to explore, start with self.get_merger().
         # Queue format: [[clump, dval], ...], where dval is the data value at which the clump connects
         # NOTE: only expanded clumps are expected in the queue
-        queue = [[self.mergesto(), self.mergesto().dpeak]]
+        queue = [[self.get_merger(), self.get_merger().dpeak]]
         
         # Init the connected dict
         # NOTE: only expanded clumps are expected in the dict
@@ -589,7 +589,7 @@ class Clump(object):
             assert not focused_clump.merges, "Only expanded clumps are expected in the queue."
             
             for child_clump, child_dval in focused_clump.touching.iteritems():
-                exp_child_clump = child_clump.mergesto() # expand clump
+                exp_child_clump = child_clump.get_merger() # expand clump
                 
                 # get the minimal data value along the path
                 min_dval = min(focused_dval, child_dval)
@@ -604,8 +604,8 @@ class Clump(object):
                     if min_dval > connected[exp_child_clump]:
                         connected[exp_child_clump] = min_dval
         
-        # remove self.mergesto() from connected
-        del connected[self.mergesto()]
+        # remove self.get_merger() from connected
+        del connected[self.get_merger()]
         
         return connected
     
@@ -672,7 +672,7 @@ class Pixel(object):
         for shift in self.neigh_map:
             ncl = self.clmask[tuple(self.ijk + shift)]
             if ncl > -1:
-                neighbour = self.clumps[ncl].mergesto()
+                neighbour = self.clumps[ncl].get_merger()
                 if neighbour not in neighbours:
                     neighbours.append(neighbour)
         neighbours.sort(key=lambda clump: clump.ncl) # clumps with lower ncl first
@@ -692,7 +692,7 @@ class Pixel(object):
         
         grandparents = []
         for neighbour in neighbours:
-            grandparent = neighbour.grandparent()
+            grandparent = neighbour.get_grandparent()
             if grandparent not in grandparents:
                 grandparents.append(grandparent)
         grandparents.sort(key=lambda clump: clump.ncl) # clumps with lower ncl first
