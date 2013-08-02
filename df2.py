@@ -476,6 +476,7 @@ class Clump(object):
         self.ncl = ncl         # label
         self.final_ncl = None  # final clump label to be set during renumbering
         self.Npx = 1           # number of pixels (incl. pixels of clumps which merge to this clump)
+        self.pixels = [[px.ijk, px.dval]] # list of pixels belonging to the clump: [[(x,y,z), dval], ...]
         self.parent = self     # parent to which the clump is connected (the nearest clump with
                                # higher dpeak touching this clump)
         self.merges = False    # whether the clump merges to its parent
@@ -512,8 +513,9 @@ class Clump(object):
         assert merger is not self, "Attempt to merge clump to itself."
         
         # ------ merge ------
-        # update pixel count
+        # update pixels
         merger.Npx += self.Npx
+        merger.pixels.extend(self.pixels)
         
         # update xyz
         merger.xyz = (self.wxyz*self.xyz + merger.wxyz*merger.xyz)/(self.wxyz + merger.wxyz)
@@ -619,12 +621,17 @@ class Clump(object):
         # compact touching clumps dict first
         self.compact_touching()
         
-        # sort touching clumps (order by dval_at_which_they_touch)
-        touching = sorted(self.touching.iteritems(), key=lambda x: x[1], reverse=True)
+        # sort touching clumps (order by dval_at_which_they_touch, ncl)
+        touching = list(self.touching.iteritems())
+        touching.sort(key=lambda x: (-x[1], x[0].final_ncl))
         
-        # get connected clumps, sort them (by dval_at_which_they_connect) and convert to list
+        # get connected clumps, then sort them (by dval_at_which_they_connect, ncl)
         connected = self.get_connected()
-        connected = sorted(connected.iteritems(), key=lambda x: x[1], reverse=True)
+        connected = list(connected.iteritems())
+        connected.sort(key=lambda x: (-x[1], x[0].final_ncl))
+        
+        # sort list of pixels (order by dval, k, j, i)
+        self.pixels.sort(key=lambda x: (-x[1], x[0][2], x[0][1], x[0][0]))
         
         # generate text_repr to be returned
         text_repr  = "clump: {final_ncl}\n".format(final_ncl=self.final_ncl)
@@ -633,12 +640,21 @@ class Clump(object):
         text_repr += "  state: independent\n"
         text_repr += "  Ntouching: {Ntouching}\n".format(Ntouching=len(touching))
         text_repr += "  Nconnected: {Nconnected}\n".format(Nconnected=len(connected))
+        text_repr += "  pixels:\n"
+        for px in self.pixels:
+            text_repr += "    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval}\n".format(ijk=px[0], dval=px[1])
+            """
+            NOTE: PyFITS reverses the order of coordinates, therefore we output 2-1-0.
+            NOTE: Coordinates in FITS start from 1 and since arrays clmask and idata in this code
+                  added an one-pixel border around the original data, these two shifts cancel each
+                  other out and we can output ijk directly.
+            """
         text_repr += "  touching:\n"
         for cl in touching:
-            text_repr += "    {final_ncl} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1])
+            text_repr += "    {final_ncl:>3d} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1])
         text_repr += "  connected:\n"
         for cl in connected:
-            text_repr += "    {final_ncl} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1])
+            text_repr += "    {final_ncl:>3d} {dval}\n".format(final_ncl=cl[0].final_ncl, dval=cl[1])
         
         return text_repr
 
@@ -706,6 +722,7 @@ class Pixel(object):
     def addto(self, clump):
         """Adds pixel to clump."""
         clump.Npx += 1
+        clump.pixels.append([self.ijk, self.dval])
         clump.xyz = (self.dval*self.xyz + clump.wxyz*clump.xyz)/(self.dval + clump.wxyz) # use dval as the weight
         clump.wxyz += self.dval
         clump.sumd += self.dval
