@@ -622,6 +622,7 @@ class Clump(object):
                 else:
                     # update if found a better/"higher" path (with greater minimal dval along it)
                     if min_dval > connected[exp_child_clump]:
+                        queue.append([exp_child_clump, min_dval])
                         connected[exp_child_clump] = min_dval
         
         # remove self.get_merger() from connected
