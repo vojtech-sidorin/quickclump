@@ -284,38 +284,56 @@ def find_all_clumps(idata, clmask, clumps, options):
         
         # more clumps --> merge/connect them
         else: # len(neighbours) > 1
+            """
+            There are two things to do, now:
+             
+              (1) Add the pixel to a clump.
+              (2) Update properties of the neighbouring clumps:
+                    (a) Merge too short clumps.
+                    (b) Update touching lists.
+                    (c) Connect grandparents.
+            """
             
-            # add pixel to the nearest clump which will not be merged
-            # If no neighbour with leaf > dTleaf --> add to the highest
-            px.mergesto = neighbours[0]  # start with tallest neighbour
-            px.dist2_min = px.dist2(px.mergesto)
+            # (1) Add the pixel to a clump.
+            """
+            Add the pixel to the nearest clump which will not be merged, i.e. to the nearest
+            clump which has leaf > dTleaf, or to the tallest clump, if no clump with high
+            enough leaf exists.
+            """
+            # find the merger (clump to which the pixel will be added)
+            merger = neighbours[0] # start with tallest neighbour (neighbours are sorted)
+            dist2_min = px.dist2(merger)
             for neighbour in neighbours[1:]:
-                
-                # neighbours with short leaves -- these can't here changle px.mergesto
-                if neighbour.dpeak-px.dval < options.dTleaf: # ... then final px.mergesto must be now already determined
-                    neighbour.parent = px.mergesto # NOTE: if it had parent, it wouldn't pass the IF above,
-                                                # since it would be already merged (too small leaf)
-                    neighbour.merge_to_parent()
-                
-                # neighbours with high enough leaves -- update px.*
+                if neighbour.dpeak - px.dval < options.dTleaf:
+                    break # stop search as soon as a too short clump is hit
                 else:
-                    # update pixel's dist2
                     dist2 = px.dist2(neighbour)
-                    if dist2 < px.dist2_min:
-                        px.dist2_min = dist2
-                        px.mergesto = neighbour
-            # add pixel to its clump
-            clmask[key3] = px.mergesto.ncl
-            px.addto(px.mergesto)
+                    if dist2 < dist2_min:
+                        dist2_min = dist2
+                        merger = neighbour
             
-            # make all neighbours touching at this pixel
+            # add pixel to merger
+            clmask[key3] = merger.ncl
+            px.addto(merger)
+            
+            # (2a) Merge too short clumps.
+            for neighbour in neighbours[1:]:
+                if neighbour.dpeak - px.dval < options.dTleaf:
+                    neighbour.parent = merger
+                    neighbour.merge_to_parent()
+                    """
+                    NOTE: If neighbour had a parent, it wouldn't pass the IF above, since it
+                    would have been already merged.
+                    """
+            
+            # (2b) Update touching lists.
             for i, neighbour in enumerate(neighbours):
                 for other_neighbour in neighbours[:i]:
                     neighbour.update_touching(other_neighbour, px.dval)
                     other_neighbour.update_touching(neighbour, px.dval)
             
-            # connect grandparents (applies only if more than 1)
-            gps = px.get_grandparents(neighbours)
+            # (2c) Connect grandparents.
+            gps = px.get_grandparents(neighbours) # (grandparents are sorted)
             for i in xrange(1, len(gps)):
                 gp = gps[i]
                 gp.parent = gps[0]
