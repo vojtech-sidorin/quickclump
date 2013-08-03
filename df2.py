@@ -34,6 +34,7 @@ import os
 import argparse
 import numpy as np
 import pyfits
+import datetime
 
 __version__ = "0.1-devel"
 
@@ -90,7 +91,7 @@ def main(argv=None):
         
         # write clmask to output FITS
         print "Writing output FITS."
-        write_ofits(options.ofits, clmask, final_clumps_count)
+        write_ofits(options.ofits, ifits_header, clmask, final_clumps_count, options)
         
         # write clumps to output text file
         print "Writing output text file."
@@ -417,21 +418,46 @@ def renumber_clmask(clmask, clumps):
             clmask[ijk] = 0
 
 
-def write_ofits(ofits, clmask, final_clumps_count):
+def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
     """Writes clmask to output FITS file.
     
     If ofits exists it will be overwritten.
     """
-
+    
+    assert hasattr(options, "ifits")
+    assert hasattr(options, "dTleaf")
+    assert hasattr(options, "Tcutoff")
+    assert hasattr(options, "Npxmin")
+    
     # reduce size of clmask if possible
     if final_clumps_count <= np.iinfo("uint8").max:
         clmask = clmask.astype("uint8")
     elif final_clumps_count <= np.iinfo("int16").max:
         clmask = clmask.astype("int16")
-
+    
+    # create new FITS HDU
+    ohdu = pyfits.PrimaryHDU(clmask[1:-1,1:-1,1:-1]) # strip clmask's boundary
+    
+    # set header
+    ohdu.header.update("BUNIT", "Ncl", "clump number")
+    ohdu.header.update("DATE", datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"), "file creation date")
+    ohdu.header.add_comment("File created by df2.py (v{version}).".format(version=__version__))
+    ohdu.header.add_comment("Original data file: '{ifits}'".format(ifits=os.path.basename(options.ifits)))
+    ohdu.header.add_comment("df2.py was run with the following parameters:")
+    ohdu.header.add_comment("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
+    ohdu.header.add_comment("  Tcutoff={Tcutoff}".format(Tcutoff=options.Tcutoff))
+    ohdu.header.add_comment("  Npxmin={Npxmin}".format(Npxmin=options.Npxmin))
+    ohdu.header.add_comment("Total clumps found: {fcc}".format(fcc=final_clumps_count))
+    ohdu.header.add_comment(
+        "This FITS file is a mask for the original data file '{ifits}'. Each pixel "
+        "contains an integer, which corresponds to the label of a clump that owns "
+        "the pixel. Pixels marked with zeroes belong to no clump."
+        .format(ifits=os.path.basename(options.ifits))
+        )
+    
     # write FITS
     if os.path.exists(ofits): os.remove(ofits)
-    pyfits.writeto(ofits, clmask[1:-1,1:-1,1:-1]) # strip clmask's boundary
+    ohdu.writeto(ofits)
 
 
 def write_otext(otext, clumps, options):
