@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# script by Vojtech Sidorin
+# Script by Vojtěch Sidorin.
+# This script is part of the DENDROFIND package.
 
-"""
-Identifies clumps within a 3D FITS datacube.
+u"""Identifies clumps within a 3D FITS datacube.
 
 The algorithm was originally conceived by Richard Wünsch, who also
 published its first implementation in Python, later rewritten in C.
 Compared to the original, this implementation (df2) uses different
-data structures and doesn't use the parameter Nlevels.  This new
-implementation is also significantly less computationally expensive
-and scales linearly with the datacube volume (number of pixels).
+data structures and doesn't use the parameter Nlevels.  df2 is also
+significantly faster and scales linearly with the datacube volume
+(number of pixels).
 
 Type "python df2.py -h" for usage help.
 
@@ -19,14 +19,24 @@ of the original algorithm.  First practical usage together with another
 description was published by Wünsch et al. (2012)
 (http://adsabs.harvard.edu/abs/2012A%26A...539A.116W).
 
-NOTE:
-Following my tests with real CO data, this program consumes up
-to 10 times the size of the input data cube.  Especially the numpy's
-std() method is not extremely memory efficient -- takes about 6 times
-the size of the array.  If you provide -dTleaf and -Tcutoff on the
-command line, the memory-hungry numpy routines won't be called and
-the memory usage should stay below 5 times the size of your input
-data cube.
+NOTE: Besides invoking from the command-line, df2 can be used in Python's
+interactive mode, thus the following two methods are equivalent:
+
+  (1) Invoking from command-line (example):
+      $ python df2.py -ifits datacube.fits
+  
+  (2) Using interactive mode (example):
+      $ python
+      >>> import df2
+      >>> df2.main("-ifits datacube.fits".split())
+
+NOTE: Following my tests with real CO data, this program consumes up to
+10 times the size of the input data cube.  Especially, numpy's std()
+method is eager for memory and takes about 6 times the size of the array.
+If you provide -dTleaf and -Tcutoff parameters, however, the memory-hungry
+numpy routines won't be called and the memory usage should stay below 5
+times the size of your input data cube.
+-vs-
 """
 
 import sys
@@ -83,7 +93,7 @@ def main(argv=None):
         renumber_clumps(clumps, options.Npxmin)
         final_clumps_count = renumber_clumps.last_new_ncl
         renumber_clmask(clmask, clumps)
-        print "{0} clumps found.".format(final_clumps_count)
+        print "{N} clumps found.".format(N=final_clumps_count)
         """
         NOTE: Clumps have now set their final_ncl attribute, which goes from 1 on.
         NOTE: Clumps with Npx < Npxmin have their final_ncl set to 0.
@@ -226,18 +236,19 @@ def none_to_defaults(options, idata):
 
 
 def find_all_clumps(idata, clmask, clumps, options):
-    """
-    Finds all clumps in data cube.
+    """Finds all clumps in data cube.
     
-    All means that this function will find also small clumps -- as small
-    as one pixel.  These small clumps are expected to be merged or
-    deleted later by other routines.
+    'All' means that this function will also find small clumps --
+    as small as one pixel.  These small clumps are expected to be
+    merged or deleted later by other routines.
     
     Arguments:
     idata -- input 3D data cube
     clmask -- clump mask (3D array of integers)
     clumps -- list of found clumps
     options -- namespace with additional options
+    
+    This function updates clmask and clumps in-place.
     """
     
     assert hasattr(options, "dTleaf")
@@ -260,10 +271,10 @@ def find_all_clumps(idata, clmask, clumps, options):
         # get data value
         dval = idata[key3]
         
-        # continue if NAN
+        # skip if NAN
         if dval is np.nan: continue
         
-        # terminate if dval < Tcutoff
+        # terminate if dval < Tcutoff (since keys are sorted, we can terminate the loop)
         if dval < options.Tcutoff: break
         
         # initialize pixel
@@ -380,7 +391,7 @@ def renumber_clumps(clumps, Npxmin):
       (1) The numbering starts from 1.
       (2) Merged clumps are renumbered according to the final_ncl of the clump to which they merge.
           This is consistent, since clumps are expected to merge only to clumps with lower ncl, which
-          are renumbered prior to the merging clump.
+          are processed/renumbered prior to the merging clump.
       (3) Solitary clumps with too little pixels (< Npxmin) are "deleted":  final_ncl is set to 0.
     
     The final count of clumps after renumbering can be retrieved from outside of this function
@@ -463,9 +474,9 @@ def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
 def write_otext(otext, clumps, options):
     """Write clumps to output text file.
     
-    The output text file is an ASCII file compatible with the original dendrofind
-    textual output and as such can be used by supportive dendrofind scripts, e.g.
-    df_dendrogram.py for plotting the dendrogram.
+    The output text file is compatible with the original dendrofind's textual
+    output and as such can be used as an input for supportive dendrofind scripts,
+    e.g., df_dendrogram.py for plotting the dendrogram.
     
     If otext file exists, it will be overwritten.
     """
