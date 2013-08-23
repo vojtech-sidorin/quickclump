@@ -46,7 +46,7 @@ import numpy as np
 import pyfits
 import datetime
 
-__version__ = "1.0"
+__version__ = "1.0-2"
 
 # ============
 # Main program
@@ -422,11 +422,17 @@ def renumber_clumps(clumps, Npxmin):
 def renumber_clmask(clmask, clumps):
     """Renumbers clmask according to clumps' final_ncl."""
     
-    for ijk, ncl in np.ndenumerate(clmask):
-        try:
-            clmask[ijk] = clumps[ncl].final_ncl
-        except KeyError:
-            clmask[ijk] = 0
+    if len(clumps) < 1:
+        clmask[:] = 0
+    else:
+        for ijk, ncl in np.ndenumerate(clmask):
+            if clmask[ijk] < 0:
+                clmask[ijk] = 0
+            else:
+                try:
+                    clmask[ijk] = clumps[ncl].final_ncl
+                except IndexError:
+                    clmask[ijk] = 0
 
 
 def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
