@@ -46,7 +46,7 @@ import numpy as np
 import pyfits
 import datetime
 
-__version__ = "1.0-2"
+__version__ = "1.0-3"
 
 # ============
 # Main program
@@ -64,6 +64,9 @@ def main(argv=None):
         
         # derive options not set by args parser
         options = none_to_defaults(options, idata)
+        
+        # check options
+        check_options(options)
         
         # Init clumps mask: pixels labeled with corresponding clump numbers
         clmask = np.empty(idata.shape, dtype="int32")
@@ -123,7 +126,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
     parser.add_argument("-version", action="version", version=__version__)
     parser.add_argument("-ifits", required=True, help="FITS file where to search for clumps.")
-    parser.add_argument("-dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. (default: 3*sig_noise)")
+    parser.add_argument("-dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. Must be > 0. (default: 3*sig_noise)")
     parser.add_argument("-Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. (default: 3*sig_noise)")
     parser.add_argument("-Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
     parser.add_argument("-ofits", help="FITS file where the found clumps will be saved. If exists, will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
@@ -233,6 +236,15 @@ def none_to_defaults(options, idata):
             new_options.Tcutoff = 3.*std_noise
     
     return new_options
+
+
+def check_options(options):
+    """Checks values of some options."""
+    
+    assert hasattr(options, "dTleaf")
+    
+    if options.dTleaf <= 0.:
+        raise Error("'dTleaf' must be > 0.")
 
 
 def find_all_clumps(idata, clmask, clumps, options):
