@@ -127,7 +127,7 @@ def parse_args(argv=None):
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument("--dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. Must be > 0. (default: 3*sig_noise)")
-    parser.add_argument("--Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. (default: 3*sig_noise)")
+    parser.add_argument("--Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. Must be > 0. (default: 3*sig_noise)")
     parser.add_argument("--Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps will be saved. If OFITS exists, it will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
     parser.add_argument("--otext", help="Text file where the found clumps will be saved in a human-readable form. If OTEXT exists, it will be overwritten. (default: IFITS with modified extension '.clumps.txt')")
@@ -242,9 +242,10 @@ def check_options(options):
     """Checks values of some options."""
     
     assert hasattr(options, "dTleaf")
+    assert hasattr(options, "Tcutoff")
     
-    if options.dTleaf <= 0.:
-        raise Error("'dTleaf' must be > 0.")
+    if not (options.dTleaf > 0.): raise Error("'dTleaf' must be > 0.")
+    if not (options.Tcutoff > 0.): raise Error("'Tcutoff' must be > 0.")
 
 
 def find_all_clumps(idata, clmask, clumps, options):
@@ -274,7 +275,7 @@ def find_all_clumps(idata, clmask, clumps, options):
 
     # Find clumps -- loop over sorted keys of pixels starting at maximum
     ncl = -1 # current clump label/index
-    assert options.Tcutoff > -np.inf, "Tcutoff must be > -inf." # -inf shouldn't parse through CLI
+    assert options.Tcutoff > 0.
     for key1 in skeys1:
         
         # derive key3 (3-D key)
