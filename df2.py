@@ -124,13 +124,13 @@ def parse_args(argv=None):
     
     # setup parser
     parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
-    parser.add_argument("-version", action="version", version=__version__)
-    parser.add_argument("-ifits", required=True, help="FITS file where to search for clumps.")
-    parser.add_argument("-dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. Must be > 0. (default: 3*sig_noise)")
-    parser.add_argument("-Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. (default: 3*sig_noise)")
-    parser.add_argument("-Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
-    parser.add_argument("-ofits", help="FITS file where the found clumps will be saved. If exists, will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
-    parser.add_argument("-otext", help="Text file where the found clumps will be saved in human-readable form. If exists, will be overwritten. (default: IFITS with modified extension '.clumps.txt')")
+    parser.add_argument("ifits", help="FITS file where to search for clumps.")
+    parser.add_argument("-v", "--version", action="version", version=__version__)
+    parser.add_argument("--dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. Must be > 0. (default: 3*sig_noise)")
+    parser.add_argument("--Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. (default: 3*sig_noise)")
+    parser.add_argument("--Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
+    parser.add_argument("--ofits", help="FITS file where the found clumps will be saved. If OFITS exists, it will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
+    parser.add_argument("--otext", help="Text file where the found clumps will be saved in a human-readable form. If OTEXT exists, it will be overwritten. (default: IFITS with modified extension '.clumps.txt')")
     
     # parse args
     args = parser.parse_args(args=argv)
