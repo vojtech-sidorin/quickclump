@@ -209,7 +209,7 @@ def none_to_defaults(options, idata):
     # dTleaf and/or Tcutoff --> 3 * sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
         
-        print "dTleaf and/or Tcutoff not set. Estimating from input data."
+        print "dTleaf and/or Tcutoff not set. Estimating from the input data (IFITS)."
         
         # compute data mean and std
         valid = idata.view(np.ma.MaskedArray)
@@ -224,6 +224,10 @@ def none_to_defaults(options, idata):
         mean_noise = noise.mean()
         std_noise = noise.std() # WARNING: Takes memory of ~ 6 times idata size.
         del noise
+        
+        # check if estimation of std_noise from input data succeeded
+        if (not np.isfinite(std_noise)) or (std_noise <= 0.):
+            raise Error("Estimation of std_noise from input data failed. Got value '{0}'. Is the input data in IFITS valid/reasonable?".format(std_noise))
         
         # set dTleaf
         if new_options.dTleaf is None:
