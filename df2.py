@@ -23,12 +23,12 @@ NOTE: Besides invoking from the command-line, df2 can be used in Python's
 interactive mode, thus the following two methods are equivalent:
 
   (1) Invoking from command-line (example):
-      $ python df2.py -ifits datacube.fits
+      $ python df2.py datacube.fits
   
   (2) Using interactive mode (example):
       $ python
       >>> import df2
-      >>> df2.main("-ifits datacube.fits".split())
+      >>> df2.main("datacube.fits".split())
 
 NOTE: Following my tests with real CO data, this program consumes up to
 10 times the size of the input data cube.  Especially, numpy's std()
@@ -46,7 +46,7 @@ import numpy as np
 import pyfits
 import datetime
 
-__version__ = "1.1"
+__version__ = "1.1-1"
 
 # ============
 # Main program
