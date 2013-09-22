@@ -46,7 +46,7 @@ import numpy as np
 import pyfits
 import datetime
 
-__version__ = "1.0-3"
+__version__ = "1.1"
 
 # ============
 # Main program
