@@ -46,7 +46,7 @@ import numpy as np
 import pyfits
 import datetime
 
-__version__ = "1.1-1"
+__version__ = "1.2"
 
 # ============
 # Main program
@@ -107,8 +107,9 @@ def main(argv=None):
         write_ofits(options.ofits, ifits_header, clmask, final_clumps_count, options)
         
         # write clumps to output text file
-        print "Writing output text file."
-        write_otext(options.otext, clumps, options)
+        if options.otext.strip() != "":
+            print "Writing output text file."
+            write_otext(options.otext, clumps, options)
         
     except (IOError, Error) as err:
         print >>sys.stderr, err
@@ -125,12 +126,14 @@ def parse_args(argv=None):
     # setup parser
     parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
-    parser.add_argument("-v", "--version", action="version", version=__version__)
+    parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. Must be > 0. (default: 3*sig_noise)")
     parser.add_argument("--Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. Must be > 0. (default: 3*sig_noise)")
     parser.add_argument("--Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps will be saved. If OFITS exists, it will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
-    parser.add_argument("--otext", help="Text file where the found clumps will be saved in a human-readable form. If OTEXT exists, it will be overwritten. (default: IFITS with modified extension '.clumps.txt')")
+    parser.add_argument("--otext", nargs="?", const="", default=None, help="Text file where the found clumps will be saved in a human-readable form. If OTEXT exists, it will be overwritten."
+                        " If set to an empty string or left empty, OTEXT file won't be written. This will speed up the program's execution. On the other hand, the OTEXT file is needed for constructing the dendrogram."
+                        " (default: IFITS with modified extension '.clumps.txt')")
     
     # parse args
     args = parser.parse_args(args=argv)
