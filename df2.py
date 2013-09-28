@@ -131,8 +131,8 @@ def parse_args(argv=None):
     parser.add_argument("--Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. Must be > 0. (default: 3*sig_noise)")
     parser.add_argument("--Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps will be saved. If OFITS exists, it will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
-    parser.add_argument("--otext", nargs="?", const="", default=None, help="Text file where the found clumps will be saved in a human-readable form. If OTEXT exists, it will be overwritten."
-                        " If set to an empty string or left empty, OTEXT file won't be written. This will speed up the program's execution. On the other hand, the OTEXT file is needed for constructing the dendrogram."
+    parser.add_argument("--otext", help="Text file where the found clumps will be saved in a human-readable form. If OTEXT exists, it will be overwritten."
+                        " If set to an empty string (''), OTEXT file won't be written. This will speed up the program's execution. On the other hand, the OTEXT file is needed for constructing the dendrogram."
                         " (default: IFITS with modified extension '.clumps.txt')")
     
     # parse args
