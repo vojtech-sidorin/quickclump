@@ -578,7 +578,7 @@ class Clump(object):
     
     def dist2(self, other):
         """Returns square of the distance of the clump to other clump or pixel."""
-        return sum( (self.xyz-other.xyz)**2 )
+        return ((self.xyz-other.xyz)**2).sum()
     
     def merge_to_parent(self):
         """Merges clump to its parent.
@@ -799,7 +799,7 @@ class Pixel(object):
     
     def dist2(self, other):
         """Returns square of the distance of the pixel to other pixel or clump."""
-        return sum( (self.xyz-other.xyz)**2 )
+        return ((self.xyz-other.xyz)**2).sum()
     
     def addto(self, clump):
         """Adds pixel to clump."""
