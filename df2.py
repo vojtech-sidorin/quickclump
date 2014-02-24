@@ -398,21 +398,18 @@ def merge_small_clumps(clumps, Npxmin):
     be processed first.
     """
     
-    for clump in (clumps[i] for i in xrange(len(clumps)-1, -1, -1)):
-        # already merged --> skip
+    for clump in reversed(clumps):
         if clump.merges:
+            # already merged --> skip
             continue
-        
-        # solitary/orphan clump --> skip
         elif clump.parent is clump:
+            # solitary/orphan clump --> skip
             continue
-        
-        # too small clump --> merge to its parent
         elif clump.Npx < Npxmin:
+            # too small clump --> merge to its parent
             clump.merge_to_parent()
-        
-        # too small parent --> merge clump to it
         elif clump.parent.get_merger().Npx < Npxmin:
+            # too small parent --> merge clump to it
             clump.merge_to_parent()
 
 
