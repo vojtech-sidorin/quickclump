@@ -63,7 +63,7 @@ def main(argv=None):
         ifits_header, idata = load_ifits(options.ifits)
         
         # derive options not set by args parser
-        options = none_to_defaults(options, idata)
+        options = set_defaults(options, idata)
         
         # check options
         check_options(options)
@@ -173,12 +173,13 @@ def load_ifits(ifits):
     return iheader, idata
 
 
-def none_to_defaults(options, idata):
-    """Derives defaults for None options.
+def set_defaults(options, idata):
+    """Derives defaults for options.
     
-    This function derives default values for options which are not set, presumably
-    because they were not set by the user at the command line, and could not be set
-    as simple defaults by the argument parser.  These options/arguments include:
+    This function derives default values for options which are not set,
+    presumably because they were not set by the user at the command line, and
+    could not be set as simple defaults by the argument parser.  These
+    options/arguments include:
      
      - ofits   (derived from ifits)
      - otext   (derived from ifits)
@@ -197,49 +198,60 @@ def none_to_defaults(options, idata):
     
     new_options = options
     
-    # ofits --> ifits with modified extension ".clumps.fits"
+    # ofits -- ifits with modified extension ".clumps.fits"
     if new_options.ofits is None:
-        if   new_options.ifits[-5:] == ".fits": new_options.ofits = new_options.ifits[:-5]+".clumps.fits"
-        elif new_options.ifits[-4:] == ".fit":  new_options.ofits = new_options.ifits[:-4]+".clumps.fit"
-        else:                                   new_options.ofits = new_options.ifits+".clumps.fits"
+        if new_options.ifits[-5:] == ".fits":
+            new_options.ofits = new_options.ifits[:-5] + ".clumps.fits"
+        elif new_options.ifits[-4:] == ".fit":
+            new_options.ofits = new_options.ifits[:-4] + ".clumps.fit"
+        else:
+            new_options.ofits = new_options.ifits + ".clumps.fits"
 
-    # otext --> ifits with modified extension ".clumps.txt"
+    # otext -- ifits with modified extension ".clumps.txt"
     if new_options.otext is None:
-        if   new_options.ifits[-5:] == ".fits": new_options.otext = new_options.ifits[:-5]+".clumps.txt"
-        elif new_options.ifits[-4:] == ".fit":  new_options.otext = new_options.ifits[:-4]+".clumps.txt"
-        else:                                   new_options.otext = new_options.ifits+".clumps.txt"
+        if new_options.ifits[-5:] == ".fits":
+            new_options.otext = new_options.ifits[:-5] + ".clumps.txt"
+        elif new_options.ifits[-4:] == ".fit":
+            new_options.otext = new_options.ifits[:-4] + ".clumps.txt"
+        else:
+            new_options.otext = new_options.ifits + ".clumps.txt"
 
-    # dTleaf and/or Tcutoff --> 3 * sig_noise
+    # dTleaf/Tcutoff -- 3*sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
         
-        print "dTleaf and/or Tcutoff not set. Estimating from the input data (IFITS)."
+        print("dTleaf and/or Tcutoff not set. Estimating from the input data "
+            "(IFITS).")
         
         # compute data mean and std
         valid = idata.view(np.ma.MaskedArray)
         valid.mask = ~np.isfinite(idata)
         mean_data = valid.mean()
-        std_data = valid.std() # WARNING: Takes memory of ~ 6 times idata size.
-        del valid
+        std_data = valid.std()  # WARNING: Takes memory of ~ 6 times idata size.
+        del valid  # no longer needed -- free the memory
         
         # compute noise mean and std
         noise = idata.view(np.ma.MaskedArray)
         noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
         mean_noise = noise.mean()
-        std_noise = noise.std() # WARNING: Takes memory of ~ 6 times idata size.
-        del noise
+        std_noise = noise.std()  # WARNING: Takes memory of ~ 6 times idata size.
+        del noise  # no longer needed -- free the memory
         
         # check if estimation of std_noise from input data succeeded
         if (not np.isfinite(std_noise)) or (std_noise <= 0.):
-            raise Error("Estimation of std_noise from input data failed. Got value '{0}'. Is the input data in IFITS valid/reasonable?".format(std_noise))
+            raise Error("Estimation of std_noise from input data failed. "
+                "Got value '{0}'. Is the input data in IFITS valid/reasonable?"
+                .format(std_noise))
         
         # set dTleaf
         if new_options.dTleaf is None:
-            print "Setting dTleaf to {dTleaf} (= 3*std_noise = 3*{std_noise})".format(dTleaf=3.*std_noise, std_noise=std_noise)
+            print("Setting dTleaf to {dTleaf} (= 3*std_noise = 3*{std_noise})"
+                .format(dTleaf=3.*std_noise, std_noise=std_noise))
             new_options.dTleaf = 3.*std_noise
         
         # set Tcutoff
         if new_options.Tcutoff is None:
-            print "Setting Tcutoff to {Tcutoff} (= 3*std_noise = 3*{std_noise})".format(Tcutoff=3.*std_noise, std_noise=std_noise)
+            print("Setting Tcutoff to {Tcutoff} (= 3*std_noise = 3*{std_noise})"
+                .format(Tcutoff=3.*std_noise, std_noise=std_noise))
             new_options.Tcutoff = 3.*std_noise
     
     return new_options
