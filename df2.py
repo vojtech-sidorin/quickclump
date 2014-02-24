@@ -93,8 +93,7 @@ def main(argv=None):
         
         # renumber clumps and clmask
         print "Renumbering clumps."
-        renumber_clumps(clumps, options.Npxmin)
-        final_clumps_count = renumber_clumps.last_new_ncl
+        final_clumps_count = renumber_clumps(clumps, options.Npxmin)
         renumber_clmask(clmask, clumps)
         print "{N} clumps found.".format(N=final_clumps_count)
         """
@@ -417,35 +416,34 @@ def renumber_clumps(clumps, Npxmin):
     """Renumbers clumps taking into account mergers and Npxmin limit.
     
     Sets clumps' final_ncl so that:
-      (1) The numbering starts from 1.
-      (2) Merged clumps are renumbered according to the final_ncl of the clump to which they merge.
-          This is consistent, since clumps are expected to merge only to clumps with lower ncl, which
-          are processed/renumbered prior to the merging clump.
-      (3) Solitary clumps with too little pixels (< Npxmin) are "deleted":  final_ncl is set to 0.
     
-    The final count of clumps after renumbering can be retrieved from outside of this function
-    through the function's attribute 'last_new_ncl'.
+     - The numbering starts from 1.
+     - Merged clumps are renumbered according to the final_ncl of the clump
+       to which they merge.  This is consistent, since clumps are expected to
+       merge only to clumps with a lower ncl, which are processed/renumbered
+       prior to the merging clump.
+     - Solitary clumps with too little pixels (< Npxmin) are "deleted":
+       final_ncl is set to 0.
+    
+    Returns the final count of clumps: last new_ncl.
     """
     
     new_ncl = 0
     for clump in clumps:
-        # clump merges --> use final_ncl of get_merger() clump
         if clump.merges:
+            # clump merges --> use final_ncl of get_merger() clump
             exp_clump = clump.get_merger()
             assert exp_clump.ncl < clump.ncl, "Clumps should merge only to clumps with lower ncl."
             clump.final_ncl = exp_clump.final_ncl
-        
-        # too small clump --> "delete"/renumber to 0
         elif clump.Npx < Npxmin:
+            # too small clump --> renumber to 0 (delete)
             clump.final_ncl = 0
-        
-        # assign new clump number
         else:
+            # assign new clump number
             new_ncl += 1
             clump.final_ncl = new_ncl
     
-    # save the last new_ncl (for retrieving from outside)
-    renumber_clumps.last_new_ncl = new_ncl
+    return new_ncl
 
 
 def renumber_clmask(clmask, clumps):
