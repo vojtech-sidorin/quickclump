@@ -1,42 +1,43 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Script by Vojtěch Sidorin.
-# This script is part of the DENDROFIND package.
+# df2 -- an improved implementation of DENDROFIND
+# Author: Vojtech Sidorin
 
-u"""Identifies clumps within a 3D FITS datacube.
+"""Identifies clumps within a 3D FITS datacube.
 
 The algorithm was originally conceived by Richard Wünsch, who also
 published its first implementation in Python, later rewritten in C.
 Compared to the original, this implementation (df2) uses different
-data structures and doesn't use the parameter Nlevels.  df2 is also
+data structures and doesn't use parameter Nlevels.  df2 is also
 significantly faster and scales linearly with the datacube volume
 (number of pixels).
 
 Type "python df2.py -h" for usage help.
 
 See http://galaxy.asu.cas.cz/~richard/dendrofind/ for the description
-of the original algorithm.  First practical usage together with another
-description was published by Wünsch et al. (2012)
+of the original algorithm.  The first practical use together with
+another description was published by Wunsch et al. (2012)
 (http://adsabs.harvard.edu/abs/2012A%26A...539A.116W).
 
-NOTE: Besides invoking from the command-line, df2 can be used in Python's
-interactive mode, thus the following two methods are equivalent:
+NOTE: Besides invoking from the command-line, df2 can be used in
+Python's interactive mode, thus the following two methods are
+equivalent:
 
-  (1) Invoking from command-line (example):
-      $ python df2.py datacube.fits
-  
-  (2) Using interactive mode (example):
-      $ python
-      >>> import df2
-      >>> df2.main("datacube.fits".split())
+ (1) Invoking from the command-line:
+     $ python df2.py my_datacube.fits
+ 
+ (2) Using the interactive mode:
+     $ python
+     >>> import df2
+     >>> df2.main(["my_datacube.fits"])
 
 NOTE: Following my tests with real CO data, this program consumes up to
-10 times the size of the input data cube.  Especially, numpy's std()
-method is eager for memory and takes about 6 times the size of the array.
-If you provide -dTleaf and -Tcutoff parameters, however, the memory-hungry
-numpy routines won't be called and the memory usage should stay below 5
-times the size of your input data cube.
--vs-
+10 times the size of the input data cube.  Numpy's std() method is
+especially eager for memory and takes about 6 times the size of the
+array (input data cube).  If you provide -dTleaf and -Tcutoff
+parameters, however, the memory-hungry numpy routines won't be called
+and the memory usage should stay below 5 times the size of your input
+data cube. -VS-
 """
 
 import sys
@@ -48,64 +49,54 @@ import datetime
 
 __version__ = "1.2"
 
-# ============
-# Main program
-# ============
-
 def main(argv=None):
-    
     try:
-        
-        # parse arguments: if argv is None, arguments from sys.argv will be parsed
+        # Parse arguments: if argv is None, arguments from sys.argv will be
+        # used.
         options = parse_args(argv)
         
-        # load FITS datacube
+        # Load the input data: FITS datacube.
         ifits_header, idata = load_ifits(options.ifits)
         
-        # derive options not set by args parser
+        # Set options that were not set by the args parser.
         options = set_defaults(options, idata)
         
-        # check options
         check_options(options)
         
-        # Init clumps mask: pixels labeled with corresponding clump numbers
+        # Initialise the clumps mask: pixels labeled with the number of the
+        # corresponding clump.
         clmask = np.empty(idata.shape, dtype="int32")
         clmask[:] = -1
-        """
-        NOTE: dtype will be reviewed -- and changed to a smaller int sufficient for
-              the number of clumps found -- before writing output FITS.
-        NOTE: Clumps are first numbered from 0 on, -1 meaning no clump owning the pixel.
-              Before writing the output FITS and TXT file, during renumbering, clumps will
-              be numbered starting from 1, 0 meaning no clump owning the pixel.  This
-              second (final) numbering will be stored in clumps' attribute final_ncl.
-        """
+        # NOTE: dtype will be reviewed later, before saving the output into a
+        # FITS file, and changed to a smaller int sufficient for holding the
+        # number of the found clumps 
+        # NOTE: Initially, the clumps are numbered from 0 on, -1 meaning no
+        # clump owning the pixel.  The final numbering, stored in clumps'
+        # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
+        # the pixel.
         
         # init list of clumps
         clumps = []
         
-        # Find all clumps
         print "Finding clumps."
         find_all_clumps(idata, clmask, clumps, options)
         
-        # merge small clumps
         print "Merging small clumps."
         merge_small_clumps(clumps, options.Npxmin)
         
-        # renumber clumps and clmask
         print "Renumbering clumps."
         final_clumps_count = renumber_clumps(clumps, options.Npxmin)
         renumber_clmask(clmask, clumps)
         print "{N} clumps found.".format(N=final_clumps_count)
-        """
-        NOTE: Clumps have now set their final_ncl attribute, which goes from 1 on.
-        NOTE: Clumps with Npx < Npxmin have their final_ncl set to 0.
-        """
+        # NOTE: The clumps have now set their final labels/numbers, which are
+        # stored in attribute final_ncl.
+        # NOTE: Too small clumps, those with Npx < Npxmin, have set their
+        # final_ncl to 0.
         
-        # write clmask to output FITS
         print "Writing output FITS."
-        write_ofits(options.ofits, ifits_header, clmask, final_clumps_count, options)
+        write_ofits(options.ofits, ifits_header, clmask, final_clumps_count,
+                    options)
         
-        # write clumps to output text file
         if options.otext.strip() != "":
             print "Writing output text file."
             write_otext(options.otext, clumps, options)
@@ -115,24 +106,33 @@ def main(argv=None):
         return 1
 
 
-# =========
-# Functions
-# =========
-
 def parse_args(argv=None):
     """Parses arguments using argparse module."""
-    
     # setup parser
-    parser = argparse.ArgumentParser(description="Identify clumps within a 3D FITS datacube.")
+    parser = argparse.ArgumentParser(description="Identifies clumps within a "
+                                     "3D FITS datacube.")
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("--dTleaf", type=float, help="Minimal depth of a valley separating adjacent clumps. Must be > 0. (default: 3*sig_noise)")
-    parser.add_argument("--Tcutoff", type=float, help="Minimal data value to consider. Pixels with lower values won't be processed. Must be > 0. (default: 3*sig_noise)")
-    parser.add_argument("--Npxmin", type=int, default=5, help="Minimal size of clumps in pixels. (default: %(default)s)")
-    parser.add_argument("--ofits", help="FITS file where the found clumps will be saved. If OFITS exists, it will be overwritten. (default: IFITS with modified extension '.clumps.fits')")
-    parser.add_argument("--otext", help="Text file where the found clumps will be saved in a human-readable form. If OTEXT exists, it will be overwritten."
-                        " If set to an empty string (''), OTEXT file won't be written. This will speed up the program's execution. On the other hand, the OTEXT file is needed for constructing the dendrogram."
-                        " (default: IFITS with modified extension '.clumps.txt')")
+    parser.add_argument("--dTleaf", type=float, help="Minimal depth of a "
+                        "valley separating adjacent clumps.  Must be > 0.  "
+                        "(default: 3*sig_noise)")
+    parser.add_argument("--Tcutoff", type=float, help="Minimal data value to "
+                        "consider.  Pixels with lower values won't be "
+                        "processed.  Must be > 0.  (default: 3*sig_noise)")
+    parser.add_argument("--Npxmin", type=int, default=5, help="Minimal size "
+                        "of a clump in pixels.  (default: %(default)s)")
+    parser.add_argument("--ofits", help="FITS file where the found clumps "
+                        "will be saved.  If OFITS exists, it will be "
+                        "overwritten.  (default: IFITS with modified "
+                        "extension '.clumps.fits')")
+    parser.add_argument("--otext", help="Text file where the found clumps "
+                        "will be saved in a human-readable form.  If OTEXT "
+                        "exists, it will be overwritten.  If set to an empty "
+                        "string (''), OTEXT file won't be written.  This will "
+                        "speed up the program's execution.  On the other "
+                        "hand, the OTEXT file is needed for the construction "
+                        "of a dendrogram.  (default: IFITS with modified "
+                        "extension '.clumps.txt')")
     
     # parse args
     args = parser.parse_args(args=argv)
@@ -140,46 +140,42 @@ def parse_args(argv=None):
     # return namespace with parsed arguments
     return args
 
-
 def load_ifits(ifits):
     """Loads and preprocess input FITS data.
     
-    Returns ifits header and preprocessed idata.
+    Returns a tuple with ifits header and preprocessed idata.
     """
-    
-    # Load first HDU (HDU = header data unit)
+    # Load the first HDU from the FITS (HDU = header data unit).
     hdulist = pyfits.open(ifits)
-    idata   = hdulist[0].data
+    idata = hdulist[0].data
     iheader = hdulist[0].header
     
     # Check if idata is 3D, i.e. has exactly 3 dimenstions.
     if idata.ndim != 3:
-        raise Error("Input FITS must contain 3D data (in the first HDU), found {0}-dimensional data.".format(idata.ndim))
+        raise Error("The input FITS file must contain 3D data (in the first "
+                    "HDU), found {0}-dimensional data.".format(idata.ndim))
     
     # Add boundary to idata.
     idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
     idata2[:] = -np.inf
     idata2[1:-1, 1:-1, 1:-1] = idata
     idata = idata2
-    """
-    The boundary is a margin around the original data cube with values
-    set to -inf.  The boundary pixels will be sorted last and the loop over
-    them is expected to terminate before reaching them.  This ensures that
-    all pixels with values > -inf will have their neighbours defined without
-    the fear of IndexError.
-    """
+    # NOTE: The boundary is a margin around the original data cube with values
+    # set to -inf.  The boundary pixels will be sorted last and the loop over
+    # them is expected to terminate before reaching them.  This ensures that
+    # all pixels with values > -inf will have their neighbours defined without
+    # the fear of IndexError.
     
     return iheader, idata
 
-
 def set_defaults(options, idata):
-    """Derives defaults for options.
+    """Sets default values for options.
     
     This function derives default values for options which are not set,
-    presumably because they were not set by the user at the command line, and
-    could not be set as simple defaults by the argument parser.  These
-    options/arguments include:
-     
+    presumably because they were not set by the user at the command line,
+    and could not be set as simple defaults by the argument parser.
+    These options include:
+    
      - ofits   (derived from ifits)
      - otext   (derived from ifits)
      - dTleaf  (derived from idata)
@@ -187,7 +183,6 @@ def set_defaults(options, idata):
     
     Returns: updated options namespace
     """
-    
     assert hasattr(options, "ifits")
     assert hasattr(options, "ofits")
     assert hasattr(options, "otext")
@@ -217,54 +212,55 @@ def set_defaults(options, idata):
 
     # dTleaf/Tcutoff -- 3*sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
+        print("dTleaf and/or Tcutoff not set.  Estimating from the input data "
+              "(IFITS).")
         
-        print("dTleaf and/or Tcutoff not set. Estimating from the input data "
-            "(IFITS).")
-        
-        # compute data mean and std
+        # Compute data mean and std
         valid = idata.view(np.ma.MaskedArray)
         valid.mask = ~np.isfinite(idata)
         mean_data = valid.mean()
-        std_data = valid.std()  # WARNING: Takes memory of ~ 6 times idata size.
-        del valid  # no longer needed -- free the memory
+        # NOTE: Numpy's std() takes memory of ~6 times idata size.
+        std_data = valid.std() 
+        del valid  # No longer needed: free the memory
         
-        # compute noise mean and std
+        # Compute noise mean and std
         noise = idata.view(np.ma.MaskedArray)
         noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
         mean_noise = noise.mean()
-        std_noise = noise.std()  # WARNING: Takes memory of ~ 6 times idata size.
-        del noise  # no longer needed -- free the memory
+        # NOTE: Numpy's std() takes memory of ~6 times idata size.
+        std_noise = noise.std()  
+        del noise  # No longer needed: free the memory
         
-        # check if estimation of std_noise from input data succeeded
+        # Check if estimation of std_noise from input data succeeded.
         if (not np.isfinite(std_noise)) or (std_noise <= 0.):
-            raise Error("Estimation of std_noise from input data failed. "
-                "Got value '{0}'. Is the input data in IFITS valid/reasonable?"
-                .format(std_noise))
+            raise Error("Estimation of std_noise from input data failed.  "
+                        "Got value '{0}'.  Is the input data in IFITS "
+                        "valid/reasonable?".format(std_noise))
         
-        # set dTleaf
+        # Set dTleaf
         if new_options.dTleaf is None:
             print("Setting dTleaf to {dTleaf} (= 3*std_noise = 3*{std_noise})"
-                .format(dTleaf=3.*std_noise, std_noise=std_noise))
+                  .format(dTleaf=3.*std_noise, std_noise=std_noise))
             new_options.dTleaf = 3.*std_noise
         
-        # set Tcutoff
+        # Set Tcutoff
         if new_options.Tcutoff is None:
-            print("Setting Tcutoff to {Tcutoff} (= 3*std_noise = 3*{std_noise})"
-                .format(Tcutoff=3.*std_noise, std_noise=std_noise))
+            print("Setting Tcutoff to {Tcutoff} (= 3*std_noise = "
+                  "3*{std_noise})"
+                  .format(Tcutoff=3.*std_noise, std_noise=std_noise))
             new_options.Tcutoff = 3.*std_noise
     
     return new_options
 
-
 def check_options(options):
-    """Checks values of some options."""
-    
+    """Checks values of dTleaf and Tcutoff."""
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
     
-    if not (options.dTleaf > 0.): raise Error("'dTleaf' must be > 0.")
-    if not (options.Tcutoff > 0.): raise Error("'Tcutoff' must be > 0.")
-
+    if not (options.dTleaf > 0.):
+        raise Error("'dTleaf' must be > 0.")
+    if not (options.Tcutoff > 0.):
+        raise Error("'Tcutoff' must be > 0.")
 
 def find_all_clumps(idata, clmask, clumps, options):
     """Finds all clumps in data cube.
@@ -274,14 +270,13 @@ def find_all_clumps(idata, clmask, clumps, options):
     merged or deleted later by other routines.
     
     Arguments:
-    idata -- input 3D data cube
-    clmask -- clump mask (3D array of integers)
-    clumps -- list of found clumps
-    options -- namespace with additional options
+     idata   -- input 3D data cube
+     clmask  -- clump mask (3D array of integers)
+     clumps  -- list of found clumps
+     options -- namespace with additional options
     
     This function updates clmask and clumps in-place.
     """
-    
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
     assert idata.ndim == 3
@@ -295,67 +290,64 @@ def find_all_clumps(idata, clmask, clumps, options):
     ncl = -1 # current clump label/index
     assert options.Tcutoff > 0.
     for key1 in skeys1:
-        
-        # derive key3 (3-D key)
+        # Derive key3 (3-D key)
         key3 = np.unravel_index(key1, idata.shape)
         
-        # get data value
+        # Get data value
         dval = idata[key3]
         
-        # skip if NAN
+        # Skip NANs
         if dval is np.nan: continue
         
-        # terminate if dval < Tcutoff (since keys are sorted, we can terminate the loop)
+        # Terminate if dval < Tcutoff.  Since the keys are sorted, we can
+        # terminate the loop.
         if dval < options.Tcutoff: break
         
-        # initialize pixel
+        # Initialize pixel
         px = Pixel(key3, idata, clmask, clumps)
         
-        # find neighbours (clumps touching at this pixel)
+        # Find neighbours (clumps touching at this pixel)
         neighbours = px.get_neighbours()
         
-        # no neighbour --> new clump
         if len(neighbours) == 0:
+            # No neighbour --> Make a new clump
             ncl += 1
             clumps += [Clump(ncl, px)]
             clmask[key3] = ncl
-        
-        # one neighbour --> add pixel to it
         elif len(neighbours) == 1:
+            # One neighbour --> Add pixel to it
             clmask[key3] = neighbours[0].ncl
             px.addto(neighbours[0])
-        
-        # more clumps --> merge/connect them
-        else: # len(neighbours) > 1
-            """
-            There are two things to do, now:
-             
-              (1) Add the pixel to a clump.
-              (2) Update properties of the neighbouring clumps:
-                    (a) Merge too short clumps.
-                    (b) Update touching lists.
-                    (c) Connect grandparents.
-            """
-            
+        else:
+            # More neighbours --> Merge/connect them
+            # NOTE: There are two things to do now:
+            #
+            #  (1) Add the pixel to a clump.
+            #  (2) Update the properties of the neighbouring clumps:
+            #       (a) Merge too short clumps.
+            #       (b) Update touching lists.
+            #       (c) Connect grandparents.
+
             # (1) Add the pixel to a clump.
-            """
-            Add the pixel to the nearest clump which will not be merged, i.e. to the nearest
-            clump which has leaf > dTleaf, or to the tallest clump, if no clump with high
-            enough leaf exists.
-            """
-            # find the merger (clump to which the pixel will be added)
-            merger = neighbours[0] # start with tallest neighbour (neighbours are sorted)
+            # NOTE: Add the pixel to the nearest clump which will not be
+            # merged, i.e. to the nearest clump which has leaf > dTleaf, or to
+            # the tallest clump if no clump with a leaf that is high enough
+            # exists.
+            
+            # Find the merger (clump to which the pixel will be added)
+            # Start with the tallest neighbour (neighbours are sorted)
+            merger = neighbours[0]
             dist2_min = px.dist2(merger)
             for neighbour in neighbours[1:]:
                 if neighbour.dpeak - px.dval < options.dTleaf:
-                    break # stop search as soon as a too short clump is hit
+                    break  # Stop search as soon as a too short clump is hit
                 else:
                     dist2 = px.dist2(neighbour)
                     if dist2 < dist2_min:
                         dist2_min = dist2
                         merger = neighbour
             
-            # add pixel to merger
+            # Add pixel to merger
             clmask[key3] = merger.ncl
             px.addto(merger)
             
@@ -364,10 +356,8 @@ def find_all_clumps(idata, clmask, clumps, options):
                 if neighbour.dpeak - px.dval < options.dTleaf:
                     neighbour.parent = merger
                     neighbour.merge_to_parent()
-                    """
-                    NOTE: If neighbour had a parent, it wouldn't pass the IF above, since it
-                    would have been already merged.
-                    """
+                    # NOTE: If the neighbour had a parent, it wouldn't pass the
+                    # IF above, since it would have been already merged.
             
             # (2b) Update touching lists.
             for i, neighbour in enumerate(neighbours):
@@ -376,7 +366,8 @@ def find_all_clumps(idata, clmask, clumps, options):
                     other_neighbour.update_touching(neighbour, px.dval)
             
             # (2c) Connect grandparents.
-            gps = px.get_grandparents(neighbours) # (grandparents are sorted)
+            # NOTE: Grandparents are sorted.
+            gps = px.get_grandparents(neighbours)
             for i in xrange(1, len(gps)):
                 gp = gps[i]
                 gp.parent = gps[0]
@@ -386,7 +377,6 @@ def find_all_clumps(idata, clmask, clumps, options):
                     if dist2 < gp.dist2_min:
                         gp.parent = gps[j]
                         gp.dist2_min = dist2
-
 
 def merge_small_clumps(clumps, Npxmin):
     """Merges clumps with too little pixels.
