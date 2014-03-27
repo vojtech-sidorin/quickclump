@@ -55,8 +55,8 @@ def main(argv=None):
         # used.
         options = parse_args(argv)
 
-        # Load the input data: FITS datacube.
-        ifits_header, idata = load_ifits(options.ifits)
+        # Load the input data (a FITS datacube).
+        idata = load_idata(options.ifits)
 
         # Set options that were not set by the args parser.
         options = set_defaults(options, idata)
@@ -94,8 +94,7 @@ def main(argv=None):
         # final_ncl to 0.
 
         print("Writing output FITS.")
-        write_ofits(options.ofits, ifits_header, clmask, final_clumps_count,
-                    options)
+        write_ofits(options.ofits, clmask, final_clumps_count, options)
 
         if options.otext.strip() != "":
             print("Writing output text file.")
@@ -135,17 +134,13 @@ def parse_args(argv=None):
     args = parser.parse_args(args=argv)
     return args
 
-def load_ifits(ifits):
+def load_idata(ifits):
 
-    """Load and preprocess input FITS data.
-
-    Return a tuple with ifits header and preprocessed idata.
-    """
+    """Load and preprocess input FITS data."""
 
     # Load the first HDU from the FITS (HDU = header data unit).
     hdulist = pyfits.open(ifits)
     idata = hdulist[0].data
-    iheader = hdulist[0].header
 
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
     if idata.ndim != 3:
@@ -163,7 +158,7 @@ def load_ifits(ifits):
     # all pixels with values > -inf will have their neighbours defined without
     # the fear of IndexError.
 
-    return iheader, idata
+    return idata
 
 def set_defaults(options, idata):
 
@@ -217,7 +212,6 @@ def set_defaults(options, idata):
         # Compute data mean and std.
         valid = idata.view(np.ma.MaskedArray)
         valid.mask = ~np.isfinite(idata)
-        mean_data = valid.mean()
         # NOTE: Numpy's std() takes memory of ~6 times idata size.
         std_data = valid.std() 
         del valid  # No longer needed: free the memory
@@ -225,7 +219,6 @@ def set_defaults(options, idata):
         # Compute noise mean and std.
         noise = idata.view(np.ma.MaskedArray)
         noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
-        mean_noise = noise.mean()
         # NOTE: Numpy's std() takes memory of ~6 times idata size.
         std_noise = noise.std()  
         del noise  # No longer needed: free the memory
@@ -300,11 +293,13 @@ def find_all_clumps(idata, clmask, clumps, options):
         dval = idata[key3]
 
         # Skip NANs
-        if dval is np.nan: continue
+        if dval is np.nan:
+            continue
 
         # Terminate if dval < Tcutoff.  Since the keys are sorted, we can
         # terminate the loop.
-        if dval < options.Tcutoff: break
+        if dval < options.Tcutoff:
+            break
 
         # Initialize pixel
         px = Pixel(key3, idata, clmask, clumps)
@@ -447,7 +442,7 @@ def renumber_clmask(clmask, clumps):
             else:
                 clmask[ijk] = clumps[ncl].final_ncl
 
-def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
+def write_ofits(ofits, clmask, final_clumps_count, options):
 
     """Write clmask to the output FITS file.
 
@@ -466,7 +461,7 @@ def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
         clmask = clmask.astype("int16")
 
     # Create a new FITS HDU.  Compensate for the border.
-    ohdu = pyfits.PrimaryHDU(clmask[1:-1,1:-1,1:-1])
+    ohdu = pyfits.PrimaryHDU(clmask[1:-1, 1:-1, 1:-1])
 
     # Set the header.
     ohdu.header.update("BUNIT", "Ncl", "clump number")
@@ -489,7 +484,7 @@ def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
     ohdu.header.add_comment(
         "This FITS file is a mask for the original data file '{ifits}'. "
         "Each pixel contains an integer that corresponds to the label of the "
-        "clump that owns the pixel.  Pixels marked with zeroes belong to no "
+        "clump that owns the pixel. Pixels marked with zeroes belong to no "
         "clump.".format(ifits=os.path.basename(options.ifits))
         )
 
@@ -784,12 +779,12 @@ class Pixel(object):
     """Pixel within the data cube."""
 
     # Relative map for neighbouring pixels
-    neigh_map = np.array([(0,0,+1),
-                          (0,0,-1),
-                          (0,+1,0),
-                          (0,-1,0),
-                          (+1,0,0),
-                          (-1,0,0)], dtype=int)
+    neigh_map = np.array([( 0,  0, +1),
+                          ( 0,  0, -1),
+                          ( 0, +1,  0),
+                          ( 0, -1,  0),
+                          (+1,  0,  0),
+                          (-1,  0,  0)], dtype=int)
 
     def __init__(self, ijk, idata, clmask, clumps):
         # (i,j,k) coordinates
@@ -828,7 +823,8 @@ class Pixel(object):
 
         The list of grandparents is sorted: clumps with lower ncl first.
         """
-        if neighbours is None: neighbours = self.get_neighbours()
+        if neighbours is None:
+            neighbours = self.get_neighbours()
         grandparents = []
         for neighbour in neighbours:
             grandparent = neighbour.get_grandparent()
