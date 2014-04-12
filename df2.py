@@ -100,8 +100,8 @@ def main(argv=None):
             print("Writing output text file.")
             write_otext(options.otext, clumps, options)
 
-    except (IOError, Error) as err:
-        sys.stderr.write(str(err))
+    except (IOError, Error) as e:
+        sys.stderr.write("{0}: {1}\n".format(e.__class__.__name__, str(e)))
         return 1
 
 
@@ -533,11 +533,6 @@ class Error(Exception):
     in the case an anticipated error occurs.
     """
 
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return "Error: {0}".format(self.msg)
 
 class Clump(object):
 
