@@ -100,7 +100,7 @@ def main(argv=None):
             print("Writing output text file.")
             write_otext(options.otext, clumps, options)
 
-    except (IOError, Error) as e:
+    except (IOError, InputDataError, OutOfBoundsError) as e:
         sys.stderr.write("{0}: {1}\n".format(e.__class__.__name__, str(e)))
         return 1
 
@@ -144,8 +144,9 @@ def load_idata(ifits):
 
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
     if idata.ndim != 3:
-        raise Error("The input FITS file must contain 3D data (in the first "
-                    "HDU), found {0}-dimensional data.".format(idata.ndim))
+        raise InputDataError("The input FITS file must contain 3D data (in "
+                             "the first HDU), found {0}-dimensional data."
+                             .format(idata.ndim))
 
     # Add boundary to idata.
     idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
@@ -225,9 +226,10 @@ def set_defaults(options, idata):
 
         # Check if estimation of std_noise from input data succeeded.
         if (not np.isfinite(std_noise)) or (std_noise <= 0.):
-            raise Error("Estimation of std_noise from input data failed.  "
-                        "Got value '{0}'.  Is the input data in IFITS "
-                        "valid/reasonable?".format(std_noise))
+            raise OutOfBoundsError(
+                "Estimation of std_noise from input data failed.  "
+                "Got value '{0}'.  "
+                "Is the input FITS data valid/reasonable?".format(std_noise))
 
         # Set dTleaf.
         if new_options.dTleaf is None:
@@ -249,9 +251,9 @@ def check_options(options):
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
     if not (options.dTleaf > 0.):
-        raise Error("'dTleaf' must be > 0.")
+        raise OutOfBoundsError("'dTleaf' must be > 0.")
     if not (options.Tcutoff > 0.):
-        raise Error("'Tcutoff' must be > 0.")
+        raise OutOfBoundsError("'Tcutoff' must be > 0.")
 
 def find_all_clumps(idata, clmask, clumps, options):
 
@@ -525,13 +527,14 @@ def write_otext(otext, clumps, options):
                 f.write("\n")
 
 
-class Error(Exception):
+class InputDataError(Exception):
 
-    """Standard non-specific runtime error.
+    """Error in the input FITS data."""
 
-    This exception is intended as the exit point for the main() function
-    in the case an anticipated error occurs.
-    """
+
+class OutOfBoundsError(Exception):
+
+    """Error signaling that a variable is out of expected bounds."""
 
 
 class Clump(object):
