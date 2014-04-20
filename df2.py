@@ -43,16 +43,17 @@ data cube. -VS-
 import sys
 import os
 import argparse
+import datetime
+
 import numpy as np
 import pyfits
-import datetime
 
 __version__ = "1.2-1"
 
 def main(argv=None):
     try:
         # Parse arguments: if argv is None, arguments from sys.argv will be
-        # used.
+        # used automatically.
         options = parse_args(argv)
 
         # Load the input data (a FITS datacube).
@@ -131,7 +132,7 @@ def parse_args(argv=None):
                         "hand, the OTEXT file is needed for the construction "
                         "of a dendrogram.  (default: IFITS with modified "
                         "extension '.clumps.txt')")
-    args = parser.parse_args(args=argv)
+    args = parser.parse_args(argv)
     return args
 
 def load_idata(ifits):
@@ -257,7 +258,7 @@ def check_options(options):
 
 def find_all_clumps(idata, clmask, clumps, options):
 
-    """Find all clumps in the data cube.
+    """Find all clumps in data cube idata.
 
     'All' means that this function will also find small clumps --
     as small as one pixel.  The clumps that are smaller than Npxmin
@@ -446,7 +447,7 @@ def renumber_clmask(clmask, clumps):
 
 def write_ofits(ofits, clmask, final_clumps_count, options):
 
-    """Write clmask to the output FITS file.
+    """Write clmask to the output FITS file (ofits).
 
     If the output FITS (ofits) exists it will be overwritten.
     """
@@ -542,7 +543,7 @@ class Clump(object):
     """Clump found within the data cube."""
 
     def __init__(self, ncl, px):
-        """Build a new clump.
+        """Build a new clump with first pixel px.
 
         Positional arguments:
 
