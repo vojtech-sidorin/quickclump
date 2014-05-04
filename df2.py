@@ -530,12 +530,10 @@ def write_otext(otext, clumps, options):
 
 
 class InputDataError(Exception):
-
     """Error in the input FITS data."""
 
 
 class OutOfBoundsError(Exception):
-
     """Error signaling that a variable is out of expected bounds."""
 
 
