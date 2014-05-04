@@ -25,7 +25,7 @@ equivalent:
 
  (1) Invoking from the command-line:
      $ python df2.py my_datacube.fits
- 
+
  (2) Using the interactive mode:
      $ python
      >>> import df2
@@ -43,68 +43,69 @@ data cube. -VS-
 import sys
 import os
 import argparse
-import numpy as np
-import pyfits
 import datetime
 
-__version__ = "1.2-1"
+import numpy as np
+import pyfits
+
+__version__ = "1.2-2"
 
 def main(argv=None):
     try:
-        # Parse arguments: if argv is None, arguments from sys.argv will be
-        # used.
-        options = parse_args(argv)
-
-        # Load the input data: FITS datacube.
-        ifits_header, idata = load_ifits(options.ifits)
-
-        # Set options that were not set by the args parser.
-        options = set_defaults(options, idata)
-
-        check_options(options)
-
-        # Initialise the clumps mask: pixels labeled with the number of the
-        # corresponding clump.
-        clmask = np.empty(idata.shape, dtype="int32")
-        clmask[:] = -1
-        # NOTE: dtype will be reviewed later, before saving the output into a
-        # FITS file, and changed to a smaller int sufficient for holding the
-        # number of the found clumps 
-        # NOTE: Initially, the clumps are numbered from 0 on, -1 meaning no
-        # clump owning the pixel.  The final numbering, stored in clumps'
-        # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
-        # the pixel.
-
-        # init list of clumps
-        clumps = []
-
-        print("Finding clumps.")
-        find_all_clumps(idata, clmask, clumps, options)
-
-        print("Merging small clumps.")
-        merge_small_clumps(clumps, options.Npxmin)
-
-        print("Renumbering clumps.")
-        final_clumps_count = renumber_clumps(clumps, options.Npxmin)
-        renumber_clmask(clmask, clumps)
-        print("{N} clumps found.".format(N=final_clumps_count))
-        # NOTE: The clumps have now set their final labels/numbers, which are
-        # stored in attribute final_ncl.
-        # NOTE: Too small clumps, those with Npx < Npxmin, have set their
-        # final_ncl to 0.
-
-        print("Writing output FITS.")
-        write_ofits(options.ofits, ifits_header, clmask, final_clumps_count,
-                    options)
-
-        if options.otext.strip() != "":
-            print("Writing output text file.")
-            write_otext(options.otext, clumps, options)
-
-    except (IOError, Error) as err:
-        sys.stderr.write(str(err))
+        _main(argv=argv)
+    except (IOError, InputDataError, OutOfBoundsError) as e:
+        sys.stderr.write("{0}: {1}\n".format(e.__class__.__name__, str(e)))
         return 1
 
+def _main(argv=None):
+    # Parse arguments: if argv is None, arguments from sys.argv will be
+    # used automatically.
+    options = parse_args(argv)
+
+    # Load the input data (a FITS datacube).
+    idata = load_idata(options.ifits)
+
+    # Set options that were not set by the args parser.
+    options = set_defaults(options, idata)
+
+    check_options(options)
+
+    # Initialise the clumps mask: pixels labeled with the number of the
+    # corresponding clump.
+    clmask = np.empty(idata.shape, dtype="int32")
+    clmask[:] = -1
+    # NOTE: dtype will be reviewed later, before saving the output into a
+    # FITS file, and changed to a smaller int sufficient for holding the
+    # number of the found clumps.
+    # NOTE: Initially, the clumps are numbered from 0 on, -1 meaning no
+    # clump owning the pixel.  The final numbering, stored in clumps'
+    # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
+    # the pixel.
+
+    # init list of clumps
+    clumps = []
+
+    print("Finding clumps.")
+    find_all_clumps(idata, clmask, clumps, options)
+
+    print("Merging small clumps.")
+    merge_small_clumps(clumps, options.Npxmin)
+
+    print("Renumbering clumps.")
+    final_clumps_count = renumber_clumps(clumps, options.Npxmin)
+    renumber_clmask(clmask, clumps)
+    print("{N} clumps found.".format(N=final_clumps_count))
+    # NOTE: The clumps have now set their final labels/numbers, which are
+    # stored in attribute final_ncl.
+    # NOTE: Too small clumps, those with Npx < Npxmin, have set their
+    # final_ncl to 0.
+
+    print("Writing output FITS.")
+    write_ofits(options.ofits, clmask, final_clumps_count, options)
+
+    if options.otext.strip() != "":
+        print("Writing output text file.")
+        write_otext(options.otext, clumps, options)
 
 def parse_args(argv=None):
     """Parse arguments with argparse."""
@@ -132,25 +133,22 @@ def parse_args(argv=None):
                         "hand, the OTEXT file is needed for the construction "
                         "of a dendrogram.  (default: IFITS with modified "
                         "extension '.clumps.txt')")
-    args = parser.parse_args(args=argv)
+    args = parser.parse_args(argv)
     return args
 
-def load_ifits(ifits):
+def load_idata(ifits):
 
-    """Load and preprocess input FITS data.
-
-    Return a tuple with ifits header and preprocessed idata.
-    """
+    """Load and preprocess input FITS data."""
 
     # Load the first HDU from the FITS (HDU = header data unit).
     hdulist = pyfits.open(ifits)
     idata = hdulist[0].data
-    iheader = hdulist[0].header
 
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
     if idata.ndim != 3:
-        raise Error("The input FITS file must contain 3D data (in the first "
-                    "HDU), found {0}-dimensional data.".format(idata.ndim))
+        raise InputDataError("The input FITS file must contain 3D data (in "
+                             "the first HDU), found {0}-dimensional data."
+                             .format(idata.ndim))
 
     # Add boundary to idata.
     idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
@@ -163,7 +161,7 @@ def load_ifits(ifits):
     # all pixels with values > -inf will have their neighbours defined without
     # the fear of IndexError.
 
-    return iheader, idata
+    return idata
 
 def set_defaults(options, idata):
 
@@ -217,24 +215,23 @@ def set_defaults(options, idata):
         # Compute data mean and std.
         valid = idata.view(np.ma.MaskedArray)
         valid.mask = ~np.isfinite(idata)
-        mean_data = valid.mean()
         # NOTE: Numpy's std() takes memory of ~6 times idata size.
-        std_data = valid.std() 
-        del valid  # No longer needed: free the memory
+        std_data = valid.std()
+        del valid  # No longer needed: delete the reference
 
         # Compute noise mean and std.
         noise = idata.view(np.ma.MaskedArray)
         noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
-        mean_noise = noise.mean()
         # NOTE: Numpy's std() takes memory of ~6 times idata size.
-        std_noise = noise.std()  
-        del noise  # No longer needed: free the memory
+        std_noise = noise.std()
+        del noise  # No longer needed: delete the reference
 
         # Check if estimation of std_noise from input data succeeded.
         if (not np.isfinite(std_noise)) or (std_noise <= 0.):
-            raise Error("Estimation of std_noise from input data failed.  "
-                        "Got value '{0}'.  Is the input data in IFITS "
-                        "valid/reasonable?".format(std_noise))
+            raise OutOfBoundsError(
+                "Estimation of std_noise from input data failed.  "
+                "Got value '{0}'.  "
+                "Is the input FITS data valid/reasonable?".format(std_noise))
 
         # Set dTleaf.
         if new_options.dTleaf is None:
@@ -256,13 +253,13 @@ def check_options(options):
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
     if not (options.dTleaf > 0.):
-        raise Error("'dTleaf' must be > 0.")
+        raise OutOfBoundsError("'dTleaf' must be > 0.")
     if not (options.Tcutoff > 0.):
-        raise Error("'Tcutoff' must be > 0.")
+        raise OutOfBoundsError("'Tcutoff' must be > 0.")
 
 def find_all_clumps(idata, clmask, clumps, options):
 
-    """Find all clumps in the data cube.
+    """Find all clumps in data cube idata.
 
     'All' means that this function will also find small clumps --
     as small as one pixel.  The clumps that are smaller than Npxmin
@@ -300,11 +297,13 @@ def find_all_clumps(idata, clmask, clumps, options):
         dval = idata[key3]
 
         # Skip NANs
-        if dval is np.nan: continue
+        if dval is np.nan:
+            continue
 
         # Terminate if dval < Tcutoff.  Since the keys are sorted, we can
         # terminate the loop.
-        if dval < options.Tcutoff: break
+        if dval < options.Tcutoff:
+            break
 
         # Initialize pixel
         px = Pixel(key3, idata, clmask, clumps)
@@ -447,9 +446,9 @@ def renumber_clmask(clmask, clumps):
             else:
                 clmask[ijk] = clumps[ncl].final_ncl
 
-def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
+def write_ofits(ofits, clmask, final_clumps_count, options):
 
-    """Write clmask to the output FITS file.
+    """Write clmask to the output FITS file (ofits).
 
     If the output FITS (ofits) exists it will be overwritten.
     """
@@ -466,7 +465,7 @@ def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
         clmask = clmask.astype("int16")
 
     # Create a new FITS HDU.  Compensate for the border.
-    ohdu = pyfits.PrimaryHDU(clmask[1:-1,1:-1,1:-1])
+    ohdu = pyfits.PrimaryHDU(clmask[1:-1, 1:-1, 1:-1])
 
     # Set the header.
     ohdu.header.update("BUNIT", "Ncl", "clump number")
@@ -489,7 +488,7 @@ def write_ofits(ofits, ifits_header, clmask, final_clumps_count, options):
     ohdu.header.add_comment(
         "This FITS file is a mask for the original data file '{ifits}'. "
         "Each pixel contains an integer that corresponds to the label of the "
-        "clump that owns the pixel.  Pixels marked with zeroes belong to no "
+        "clump that owns the pixel. Pixels marked with zeroes belong to no "
         "clump.".format(ifits=os.path.basename(options.ifits))
         )
 
@@ -530,26 +529,20 @@ def write_otext(otext, clumps, options):
                 f.write("\n")
 
 
-class Error(Exception):
+class InputDataError(Exception):
+    """Error in the input FITS data."""
 
-    """Standard non-specific runtime error.
 
-    This exception is intended as the exit point for the main() function
-    in the case an anticipated error occurs.
-    """
+class OutOfBoundsError(Exception):
+    """Error signaling that a variable is out of expected bounds."""
 
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return "Error: {0}".format(self.msg)
 
 class Clump(object):
 
     """Clump found within the data cube."""
 
     def __init__(self, ncl, px):
-        """Build a new clump.
+        """Build a new clump with first pixel px.
 
         Positional arguments:
 
@@ -779,17 +772,18 @@ class Clump(object):
 
         return str_
 
+
 class Pixel(object):
 
     """Pixel within the data cube."""
 
     # Relative map for neighbouring pixels
-    neigh_map = np.array([(0,0,+1),
-                          (0,0,-1),
-                          (0,+1,0),
-                          (0,-1,0),
-                          (+1,0,0),
-                          (-1,0,0)], dtype=int)
+    neigh_map = np.array([( 0,  0, +1),
+                          ( 0,  0, -1),
+                          ( 0, +1,  0),
+                          ( 0, -1,  0),
+                          (+1,  0,  0),
+                          (-1,  0,  0)], dtype=int)
 
     def __init__(self, ijk, idata, clmask, clumps):
         # (i,j,k) coordinates
@@ -828,7 +822,8 @@ class Pixel(object):
 
         The list of grandparents is sorted: clumps with lower ncl first.
         """
-        if neighbours is None: neighbours = self.get_neighbours()
+        if neighbours is None:
+            neighbours = self.get_neighbours()
         grandparents = []
         for neighbour in neighbours:
             grandparent = neighbour.get_grandparent()
