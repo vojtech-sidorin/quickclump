@@ -25,7 +25,7 @@ equivalent:
 
  (1) Invoking from the command-line:
      $ python df2.py my_datacube.fits
- 
+
  (2) Using the interactive mode:
      $ python
      >>> import df2
@@ -76,7 +76,7 @@ def _main(argv=None):
     clmask[:] = -1
     # NOTE: dtype will be reviewed later, before saving the output into a
     # FITS file, and changed to a smaller int sufficient for holding the
-    # number of the found clumps 
+    # number of the found clumps.
     # NOTE: Initially, the clumps are numbered from 0 on, -1 meaning no
     # clump owning the pixel.  The final numbering, stored in clumps'
     # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
@@ -216,15 +216,15 @@ def set_defaults(options, idata):
         valid = idata.view(np.ma.MaskedArray)
         valid.mask = ~np.isfinite(idata)
         # NOTE: Numpy's std() takes memory of ~6 times idata size.
-        std_data = valid.std() 
-        del valid  # No longer needed: free the memory
+        std_data = valid.std()
+        del valid  # No longer needed: delete the reference
 
         # Compute noise mean and std.
         noise = idata.view(np.ma.MaskedArray)
         noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
         # NOTE: Numpy's std() takes memory of ~6 times idata size.
-        std_noise = noise.std()  
-        del noise  # No longer needed: free the memory
+        std_noise = noise.std()
+        del noise  # No longer needed: delete the reference
 
         # Check if estimation of std_noise from input data succeeded.
         if (not np.isfinite(std_noise)) or (std_noise <= 0.):
@@ -771,6 +771,7 @@ class Clump(object):
         str_ = "".join(str_)
 
         return str_
+
 
 class Pixel(object):
 
