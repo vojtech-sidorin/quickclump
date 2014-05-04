@@ -52,59 +52,60 @@ __version__ = "1.2-1"
 
 def main(argv=None):
     try:
-        # Parse arguments: if argv is None, arguments from sys.argv will be
-        # used automatically.
-        options = parse_args(argv)
-
-        # Load the input data (a FITS datacube).
-        idata = load_idata(options.ifits)
-
-        # Set options that were not set by the args parser.
-        options = set_defaults(options, idata)
-
-        check_options(options)
-
-        # Initialise the clumps mask: pixels labeled with the number of the
-        # corresponding clump.
-        clmask = np.empty(idata.shape, dtype="int32")
-        clmask[:] = -1
-        # NOTE: dtype will be reviewed later, before saving the output into a
-        # FITS file, and changed to a smaller int sufficient for holding the
-        # number of the found clumps 
-        # NOTE: Initially, the clumps are numbered from 0 on, -1 meaning no
-        # clump owning the pixel.  The final numbering, stored in clumps'
-        # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
-        # the pixel.
-
-        # init list of clumps
-        clumps = []
-
-        print("Finding clumps.")
-        find_all_clumps(idata, clmask, clumps, options)
-
-        print("Merging small clumps.")
-        merge_small_clumps(clumps, options.Npxmin)
-
-        print("Renumbering clumps.")
-        final_clumps_count = renumber_clumps(clumps, options.Npxmin)
-        renumber_clmask(clmask, clumps)
-        print("{N} clumps found.".format(N=final_clumps_count))
-        # NOTE: The clumps have now set their final labels/numbers, which are
-        # stored in attribute final_ncl.
-        # NOTE: Too small clumps, those with Npx < Npxmin, have set their
-        # final_ncl to 0.
-
-        print("Writing output FITS.")
-        write_ofits(options.ofits, clmask, final_clumps_count, options)
-
-        if options.otext.strip() != "":
-            print("Writing output text file.")
-            write_otext(options.otext, clumps, options)
-
+        _main(argv=argv)
     except (IOError, InputDataError, OutOfBoundsError) as e:
         sys.stderr.write("{0}: {1}\n".format(e.__class__.__name__, str(e)))
         return 1
 
+def _main(argv=None):
+    # Parse arguments: if argv is None, arguments from sys.argv will be
+    # used automatically.
+    options = parse_args(argv)
+
+    # Load the input data (a FITS datacube).
+    idata = load_idata(options.ifits)
+
+    # Set options that were not set by the args parser.
+    options = set_defaults(options, idata)
+
+    check_options(options)
+
+    # Initialise the clumps mask: pixels labeled with the number of the
+    # corresponding clump.
+    clmask = np.empty(idata.shape, dtype="int32")
+    clmask[:] = -1
+    # NOTE: dtype will be reviewed later, before saving the output into a
+    # FITS file, and changed to a smaller int sufficient for holding the
+    # number of the found clumps 
+    # NOTE: Initially, the clumps are numbered from 0 on, -1 meaning no
+    # clump owning the pixel.  The final numbering, stored in clumps'
+    # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
+    # the pixel.
+
+    # init list of clumps
+    clumps = []
+
+    print("Finding clumps.")
+    find_all_clumps(idata, clmask, clumps, options)
+
+    print("Merging small clumps.")
+    merge_small_clumps(clumps, options.Npxmin)
+
+    print("Renumbering clumps.")
+    final_clumps_count = renumber_clumps(clumps, options.Npxmin)
+    renumber_clmask(clmask, clumps)
+    print("{N} clumps found.".format(N=final_clumps_count))
+    # NOTE: The clumps have now set their final labels/numbers, which are
+    # stored in attribute final_ncl.
+    # NOTE: Too small clumps, those with Npx < Npxmin, have set their
+    # final_ncl to 0.
+
+    print("Writing output FITS.")
+    write_ofits(options.ofits, clmask, final_clumps_count, options)
+
+    if options.otext.strip() != "":
+        print("Writing output text file.")
+        write_otext(options.otext, clumps, options)
 
 def parse_args(argv=None):
     """Parse arguments with argparse."""
