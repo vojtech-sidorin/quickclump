@@ -1,43 +1,62 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # df2 -- an improved implementation of DENDROFIND
-# Author: Vojtech Sidorin
+#
+# Copyright 2014 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Identify clumps within a 3D FITS datacube.
 
-The algorithm was originally conceived by Richard Wünsch, who also
-published its first implementation in Python, later rewritten in C.
-Compared to the original, this implementation (df2) uses different
-data structures and doesn't use parameter Nlevels.  df2 is also
-significantly faster and scales linearly with the datacube volume
-(number of pixels).
+QUICK START GUIDE
 
-Type "python df2.py -h" for usage help.
+ - To find clumps in your data cube, type
 
-See http://galaxy.asu.cas.cz/~richard/dendrofind/ for the description
-of the original algorithm.  The first practical use together with
-another description was published by Wunsch et al. (2012)
-(http://adsabs.harvard.edu/abs/2012A%26A...539A.116W).
+    $ python df2.py my_datacube.fits
 
-NOTE: Besides invoking from the command-line, df2 can be used in
-Python's interactive mode, thus the following two methods are
-equivalent:
+ - To show usage help, type
 
- (1) Invoking from the command-line:
-     $ python df2.py my_datacube.fits
+    $ python df2.py -h
 
- (2) Using the interactive mode:
+ - To run in the interactive mode, type
+
      $ python
      >>> import df2
      >>> df2.main(["my_datacube.fits"])
 
+This program is an improved implementation of DENDROFIND(1) -- a clump-
+finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
+conceived by Richard Wunsch, who also published its first
+implementation in Python, later rewritten in C.  Compared to the
+original, this implementation (df2) uses different data structures and
+doesn't use parameter Nlevels.  df2 is also significantly faster and
+scales linearly with the data cube volume (number of pixels).
+
+(1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
+    description of the original DENDROFIND algorithm.  The first
+    practical use together with another description was published by
+    Wunsch et al. (2012), see
+    <http://adsabs.harvard.edu/abs/2012A%26A...539A.116W>.
+(2) See <http://www.ifa.hawaii.edu/users/jpw/clumpfind.shtml> or
+    <http://adsabs.harvard.edu/abs/1994ApJ...428..693W>.
+
 NOTE: Following my tests with real CO data, this program consumes up to
 10 times the size of the input data cube.  Numpy's std() method is
 especially eager for memory and takes about 6 times the size of the
-array (input data cube).  If you provide -dTleaf and -Tcutoff
-parameters, however, the memory-hungry numpy routines won't be called
-and the memory usage should stay below 5 times the size of your input
-data cube. -VS-
+array (input data cube).  However, if you provide the parameters
+--dTleaf and --Tcutoff at the command-line, the memory-hungry numpy
+routines won't be called and the memory usage should stay below 5 times
+the size of your input data cube.
 """
 
 import sys
@@ -848,4 +867,3 @@ class Pixel(object):
 
 if __name__ == "__main__":
     sys.exit(main())
-
