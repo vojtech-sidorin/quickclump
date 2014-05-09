@@ -57,6 +57,8 @@ array (input data cube).  However, if you provide the parameters
 --dTleaf and --Tcutoff at the command-line, the memory-hungry numpy
 routines won't be called and the memory usage should stay below 5 times
 the size of your input data cube.
+
+NOTE: Tested in Python 2.7 and 3.4.
 """
 
 import sys
@@ -390,11 +392,11 @@ def find_all_clumps(idata, clmask, clumps, options):
             # (2c) Connect grandparents.
             # NOTE: Grandparents are sorted.
             gps = px.get_grandparents(neighbours)
-            for i in xrange(1, len(gps)):
+            for i in range(1, len(gps)):
                 gp = gps[i]
                 gp.parent = gps[0]
                 gp.dist2_min = gp.dist2(gp.parent)
-                for j in xrange(i):
+                for j in range(i):
                     dist2 = gp.dist2(gps[j])
                     if dist2 < gp.dist2_min:
                         gp.parent = gps[j]
@@ -536,8 +538,8 @@ def write_otext(otext, clumps, options):
         # NOTE: The Nlevels value is set to 1000 only for the output to be
         # compatible with the original dendrofind's textual output.  It has no
         # real meaning for df2, because df2 doesn't use the Nlevels parameter.
-        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff} dTleaf = "
-                "{options.dTleaf} Npxmin = {options.Npxmin}\n"
+        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
+                "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
         # The clumps.
         for clump in clumps:
@@ -636,7 +638,7 @@ class Clump(object):
         merger.sumd += self.sumd
 
         # Update touching
-        for clump, touching_at_dval in self.touching.iteritems():
+        for clump, touching_at_dval in self.touching.items():
             merger.update_touching(clump, touching_at_dval)
 
         # Set merges tag
@@ -666,7 +668,7 @@ class Clump(object):
             to the highest value.
         """
         new_touching = {}
-        for clump, touching_at_dval in self.touching.iteritems():
+        for clump, touching_at_dval in self.touching.items():
              # Expand the touched clump.
             exp_clump = clump.get_merger()
             if exp_clump.final_ncl == 0:
@@ -711,7 +713,7 @@ class Clump(object):
             focused_dval = next_in_queue[1]
             assert not focused_clump.merges, \
                 "Only expanded clumps are expected in the queue."
-            for child_clump, child_dval in focused_clump.touching.iteritems():
+            for child_clump, child_dval in focused_clump.touching.items():
                 # Expand the clump.
                 exp_child_clump = child_clump.get_merger()
                 # Get the minimal data value along the path.
@@ -745,13 +747,13 @@ class Clump(object):
         self.compact_touching()
 
         # Sort touching clumps (order by dval_at_which_they_touch, ncl).
-        touching = list(self.touching.iteritems())
+        touching = list(self.touching.items())
         touching.sort(key=lambda x: (-x[1], x[0].final_ncl))
 
         # Get connected clumps.
         # Then sort them (by dval_at_which_they_connect, ncl).
         connected = self.get_connected()
-        connected = list(connected.iteritems())
+        connected = list(connected.items())
         connected.sort(key=lambda x: (-x[1], x[0].final_ncl))
 
         # Sort list of pixels (order by dval, k, j, i).
@@ -760,7 +762,7 @@ class Clump(object):
         # Generate str_ to be returned.
         str_ = ["clump: {final_ncl}\n"
                 "  Npx: {Npx}\n"
-                "  Tmax: {Tmax}\n"
+                "  Tmax: {Tmax:.12g}\n"
                 "  state: independent\n"
                 "  Ntouching: {Ntouching}\n"
                 "  Nconnected: {Nconnected}\n"
@@ -776,15 +778,15 @@ class Clump(object):
         # data, these two shifts cancel each other out and we can
         # output ijk directly.
         str_.append("  pixels:\n")
-        str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval}\n"
+        str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval:.12g}\n"
                      "".format(ijk=px[0], dval=px[1])
                      for px in self.pixels])
         str_.append("  touching:\n")
-        str_.extend(["    {final_ncl:>3d} {dval}\n"
+        str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
                      "".format(final_ncl=t[0].final_ncl, dval=t[1])
                      for t in touching])
         str_.append("  connected:\n")
-        str_.extend(["    {final_ncl:>3d} {dval}\n"
+        str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
                      "".format(final_ncl=c[0].final_ncl, dval=c[1])
                      for c in connected])
         str_ = "".join(str_)
