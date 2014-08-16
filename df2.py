@@ -121,11 +121,11 @@ def _main(argv=None):
     # NOTE: Too small clumps, those with Npx < Npxmin, have set their
     # final_ncl to 0.
 
-    if options.ofits.strip().upper() != "NULL":
+    if options.ofits.strip().upper() != "NONE":
         print("Writing output FITS.")
         write_ofits(options.ofits, clmask, final_clumps_count, options)
 
-    if options.otext.strip().upper() != "NULL":
+    if options.otext.strip().upper() != "NONE":
         print("Writing output text file.")
         write_otext(options.otext, clumps, options)
 
@@ -145,12 +145,12 @@ def parse_args(argv=None):
                         "of a clump in pixels.  (default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps "
                         "will be saved.  If OFITS exists, it will be "
-                        "overwritten.  If set to 'NULL', OFITS file won't be "
+                        "overwritten.  If set to 'NONE', OFITS file won't be "
                         "written.  (default: IFITS with modified extension "
                         "'.clumps.fits')")
     parser.add_argument("--otext", help="Text file where the found clumps "
                         "will be saved in a human-readable form.  If OTEXT "
-                        "exists, it will be overwritten.  If set to 'NULL', "
+                        "exists, it will be overwritten.  If set to 'NONE', "
                         "OTEXT file won't be written.  This will "
                         "speed up the program's execution.  On the other "
                         "hand, the OTEXT file is needed for the construction "
