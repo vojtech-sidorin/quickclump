@@ -121,10 +121,11 @@ def _main(argv=None):
     # NOTE: Too small clumps, those with Npx < Npxmin, have set their
     # final_ncl to 0.
 
-    print("Writing output FITS.")
-    write_ofits(options.ofits, clmask, final_clumps_count, options)
+    if options.ofits.strip().upper() != "NULL":
+        print("Writing output FITS.")
+        write_ofits(options.ofits, clmask, final_clumps_count, options)
 
-    if options.otext.strip() != "":
+    if options.otext.strip().upper() != "NULL":
         print("Writing output text file.")
         write_otext(options.otext, clumps, options)
 
@@ -144,12 +145,13 @@ def parse_args(argv=None):
                         "of a clump in pixels.  (default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps "
                         "will be saved.  If OFITS exists, it will be "
-                        "overwritten.  (default: IFITS with modified "
-                        "extension '.clumps.fits')")
+                        "overwritten.  If set to 'NULL', OFITS file won't be "
+                        "written.  (default: IFITS with modified extension "
+                        "'.clumps.fits')")
     parser.add_argument("--otext", help="Text file where the found clumps "
                         "will be saved in a human-readable form.  If OTEXT "
-                        "exists, it will be overwritten.  If set to an empty "
-                        "string (''), OTEXT file won't be written.  This will "
+                        "exists, it will be overwritten.  If set to 'NULL', "
+                        "OTEXT file won't be written.  This will "
                         "speed up the program's execution.  On the other "
                         "hand, the OTEXT file is needed for the construction "
                         "of a dendrogram.  (default: IFITS with modified "
