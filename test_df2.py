@@ -27,6 +27,16 @@ class TestCheckOptions(unittest.TestCase):
         class Empty(object): pass
         self.options = Empty()
 
+    def test_missing_options(self):
+        # Passing no options.
+        self.assertRaises(AssertionError, df2.check_options, self.options)
+        # Missing any required option.
+        required_options = ("dTleaf", "Tcutoff")
+        for option in required_options:
+            setattr(self.options, option, 1.)
+            self.assertRaises(AssertionError, df2.check_options, self.options)
+            delattr(self.options, option)
+
     def test_correct_values(self):
         self.options.Tcutoff = 1.
         self.options.dTleaf = 1.
