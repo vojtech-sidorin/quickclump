@@ -29,16 +29,17 @@ df2 is an improved implementation of
 DENDROFIND was originally conceived by Richard Wunsch, who also published its
 first implementation in Python, later rewritten in C.  Compared to the
 original implementation, df2 uses different data structures and doesn't
-need parameter Nlevels.  df2 is also faster (about 50 000 times) and scales
+need parameter `Nlevels`.  df2 is also faster (about 50 000 times) and scales
 linearly with the data cube volume (number of pixels).
 
 ## Notes
 
 -   Following my tests with real CO data, this program consumes up to 10 times
-    the size of the input data cube.  Numpy's std() method is especially eager
-    for memory and takes about 6 times the size of the array (input data cube).
-    However, if you provide the parameters --dTleaf and --Tcutoff at the
-    command-line, the memory-hungry numpy routines won't be called and the
-    memory usage should stay below 5 times the size of your input data cube.
+    the size of the input data cube.  Numpy's `std()` method is especially
+    eager for memory and takes about 6 times the size of the array (input data
+    cube).  However, if you provide the parameters `--dTleaf` and `--Tcutoff`
+    at the command-line, the memory-hungry numpy routines won't be called and
+    the memory usage should stay below 5 times the size of your input data
+    cube.
 
 -   Tested in Python 2.7 and 3.4.
