@@ -1,43 +1,71 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # df2 -- an improved implementation of DENDROFIND
-# Author: Vojtech Sidorin
+#
+# Copyright 2014 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Identify clumps within a 3D FITS datacube.
 
-The algorithm was originally conceived by Richard Wünsch, who also
-published its first implementation in Python, later rewritten in C.
-Compared to the original, this implementation (df2) uses different
-data structures and doesn't use parameter Nlevels.  df2 is also
-significantly faster and scales linearly with the datacube volume
-(number of pixels).
+QUICK START GUIDE
+=================
 
-Type "python df2.py -h" for usage help.
+To find clumps in your data cube, type
 
-See http://galaxy.asu.cas.cz/~richard/dendrofind/ for the description
-of the original algorithm.  The first practical use together with
-another description was published by Wunsch et al. (2012)
-(http://adsabs.harvard.edu/abs/2012A%26A...539A.116W).
+    $ python df2.py my_datacube.fits
 
-NOTE: Besides invoking from the command-line, df2 can be used in
-Python's interactive mode, thus the following two methods are
-equivalent:
+To show usage help, type
 
- (1) Invoking from the command-line:
-     $ python df2.py my_datacube.fits
+    $ python df2.py -h
 
- (2) Using the interactive mode:
+To run in the interactive mode, type
+
      $ python
      >>> import df2
      >>> df2.main(["my_datacube.fits"])
 
-NOTE: Following my tests with real CO data, this program consumes up to
+DESCRIPTION
+===========
+
+This program is an improved implementation of DENDROFIND(1) -- a clump-
+finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
+conceived by Richard Wunsch, who also published its first
+implementation in Python, later rewritten in C.  Compared to the
+original implementation, df2 uses different data structures and
+doesn't need parameter Nlevels.  df2 is also faster (about 50 000 times)
+and scales linearly with the data cube volume (number of pixels).
+
+(1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
+    description of the original DENDROFIND algorithm.  The first
+    practical use together with another description was published by
+    Wunsch et al. (2012), see
+    <http://adsabs.harvard.edu/abs/2012A%26A...539A.116W>.
+(2) See <http://www.ifa.hawaii.edu/users/jpw/clumpfind.shtml> or
+    <http://adsabs.harvard.edu/abs/1994ApJ...428..693W>.
+
+NOTES
+=====
+
+Following my tests with real CO data, this program consumes up to
 10 times the size of the input data cube.  Numpy's std() method is
 especially eager for memory and takes about 6 times the size of the
-array (input data cube).  If you provide -dTleaf and -Tcutoff
-parameters, however, the memory-hungry numpy routines won't be called
-and the memory usage should stay below 5 times the size of your input
-data cube. -VS-
+array (input data cube).  However, if you provide the parameters
+--dTleaf and --Tcutoff at the command-line, the memory-hungry numpy
+routines won't be called and the memory usage should stay below 5 times
+the size of your input data cube.
+
+Tested in Python 2.7 and 3.4.
 """
 
 import sys
@@ -100,10 +128,11 @@ def _main(argv=None):
     # NOTE: Too small clumps, those with Npx < Npxmin, have set their
     # final_ncl to 0.
 
-    print("Writing output FITS.")
-    write_ofits(options.ofits, clmask, final_clumps_count, options)
+    if options.ofits.strip().upper() != "NONE":
+        print("Writing output FITS.")
+        write_ofits(options.ofits, clmask, final_clumps_count, options)
 
-    if options.otext.strip() != "":
+    if options.otext.strip().upper() != "NONE":
         print("Writing output text file.")
         write_otext(options.otext, clumps, options)
 
@@ -123,16 +152,19 @@ def parse_args(argv=None):
                         "of a clump in pixels.  (default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps "
                         "will be saved.  If OFITS exists, it will be "
-                        "overwritten.  (default: IFITS with modified "
-                        "extension '.clumps.fits')")
+                        "overwritten.  If set to 'None' (case doesn't "
+                        "matter), OFITS file won't be written.  "
+                        "(default: IFITS with modified extension "
+                        "'.clumps.fits')")
     parser.add_argument("--otext", help="Text file where the found clumps "
                         "will be saved in a human-readable form.  If OTEXT "
-                        "exists, it will be overwritten.  If set to an empty "
-                        "string (''), OTEXT file won't be written.  This will "
-                        "speed up the program's execution.  On the other "
-                        "hand, the OTEXT file is needed for the construction "
-                        "of a dendrogram.  (default: IFITS with modified "
-                        "extension '.clumps.txt')")
+                        "exists, it will be overwritten.  If set to 'None' "
+                        "(case doesn't matter), OTEXT file won't be written.  "
+                        "This will speed up the program's execution.  On the "
+                        "other hand, the OTEXT file is needed for the "
+                        "construction of a dendrogram.  "
+                        "(default: IFITS with modified extension "
+                        "'.clumps.txt')")
     args = parser.parse_args(argv)
     return args
 
@@ -371,11 +403,11 @@ def find_all_clumps(idata, clmask, clumps, options):
             # (2c) Connect grandparents.
             # NOTE: Grandparents are sorted.
             gps = px.get_grandparents(neighbours)
-            for i in xrange(1, len(gps)):
+            for i in range(1, len(gps)):
                 gp = gps[i]
                 gp.parent = gps[0]
                 gp.dist2_min = gp.dist2(gp.parent)
-                for j in xrange(i):
+                for j in range(i):
                     dist2 = gp.dist2(gps[j])
                     if dist2 < gp.dist2_min:
                         gp.parent = gps[j]
@@ -517,8 +549,8 @@ def write_otext(otext, clumps, options):
         # NOTE: The Nlevels value is set to 1000 only for the output to be
         # compatible with the original dendrofind's textual output.  It has no
         # real meaning for df2, because df2 doesn't use the Nlevels parameter.
-        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff} dTleaf = "
-                "{options.dTleaf} Npxmin = {options.Npxmin}\n"
+        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
+                "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
         # The clumps.
         for clump in clumps:
@@ -617,7 +649,7 @@ class Clump(object):
         merger.sumd += self.sumd
 
         # Update touching
-        for clump, touching_at_dval in self.touching.iteritems():
+        for clump, touching_at_dval in self.touching.items():
             merger.update_touching(clump, touching_at_dval)
 
         # Set merges tag
@@ -647,7 +679,7 @@ class Clump(object):
             to the highest value.
         """
         new_touching = {}
-        for clump, touching_at_dval in self.touching.iteritems():
+        for clump, touching_at_dval in self.touching.items():
              # Expand the touched clump.
             exp_clump = clump.get_merger()
             if exp_clump.final_ncl == 0:
@@ -692,7 +724,7 @@ class Clump(object):
             focused_dval = next_in_queue[1]
             assert not focused_clump.merges, \
                 "Only expanded clumps are expected in the queue."
-            for child_clump, child_dval in focused_clump.touching.iteritems():
+            for child_clump, child_dval in focused_clump.touching.items():
                 # Expand the clump.
                 exp_child_clump = child_clump.get_merger()
                 # Get the minimal data value along the path.
@@ -726,13 +758,13 @@ class Clump(object):
         self.compact_touching()
 
         # Sort touching clumps (order by dval_at_which_they_touch, ncl).
-        touching = list(self.touching.iteritems())
+        touching = list(self.touching.items())
         touching.sort(key=lambda x: (-x[1], x[0].final_ncl))
 
         # Get connected clumps.
         # Then sort them (by dval_at_which_they_connect, ncl).
         connected = self.get_connected()
-        connected = list(connected.iteritems())
+        connected = list(connected.items())
         connected.sort(key=lambda x: (-x[1], x[0].final_ncl))
 
         # Sort list of pixels (order by dval, k, j, i).
@@ -741,7 +773,7 @@ class Clump(object):
         # Generate str_ to be returned.
         str_ = ["clump: {final_ncl}\n"
                 "  Npx: {Npx}\n"
-                "  Tmax: {Tmax}\n"
+                "  Tmax: {Tmax:.12g}\n"
                 "  state: independent\n"
                 "  Ntouching: {Ntouching}\n"
                 "  Nconnected: {Nconnected}\n"
@@ -757,15 +789,15 @@ class Clump(object):
         # data, these two shifts cancel each other out and we can
         # output ijk directly.
         str_.append("  pixels:\n")
-        str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval}\n"
+        str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval:.12g}\n"
                      "".format(ijk=px[0], dval=px[1])
                      for px in self.pixels])
         str_.append("  touching:\n")
-        str_.extend(["    {final_ncl:>3d} {dval}\n"
+        str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
                      "".format(final_ncl=t[0].final_ncl, dval=t[1])
                      for t in touching])
         str_.append("  connected:\n")
-        str_.extend(["    {final_ncl:>3d} {dval}\n"
+        str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
                      "".format(final_ncl=c[0].final_ncl, dval=c[1])
                      for c in connected])
         str_ = "".join(str_)
@@ -848,4 +880,3 @@ class Pixel(object):
 
 if __name__ == "__main__":
     sys.exit(main())
-
