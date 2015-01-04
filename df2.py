@@ -19,28 +19,32 @@
 """Identify clumps within a 3D FITS datacube.
 
 QUICK START GUIDE
+=================
 
- - To find clumps in your data cube, type
+To find clumps in your data cube, type
 
     $ python df2.py my_datacube.fits
 
- - To show usage help, type
+To show usage help, type
 
     $ python df2.py -h
 
- - To run in the interactive mode, type
+To run in the interactive mode, type
 
      $ python
      >>> import df2
      >>> df2.main(["my_datacube.fits"])
 
+DESCRIPTION
+===========
+
 This program is an improved implementation of DENDROFIND(1) -- a clump-
 finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
 conceived by Richard Wunsch, who also published its first
 implementation in Python, later rewritten in C.  Compared to the
-original, this implementation (df2) uses different data structures and
-doesn't use parameter Nlevels.  df2 is also significantly faster and
-scales linearly with the data cube volume (number of pixels).
+original implementation, df2 uses different data structures and
+doesn't need parameter Nlevels.  df2 is also faster (about 50 000 times)
+and scales linearly with the data cube volume (number of pixels).
 
 (1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
     description of the original DENDROFIND algorithm.  The first
@@ -50,7 +54,10 @@ scales linearly with the data cube volume (number of pixels).
 (2) See <http://www.ifa.hawaii.edu/users/jpw/clumpfind.shtml> or
     <http://adsabs.harvard.edu/abs/1994ApJ...428..693W>.
 
-NOTE: Following my tests with real CO data, this program consumes up to
+NOTES
+=====
+
+Following my tests with real CO data, this program consumes up to
 10 times the size of the input data cube.  Numpy's std() method is
 especially eager for memory and takes about 6 times the size of the
 array (input data cube).  However, if you provide the parameters
@@ -58,7 +65,7 @@ array (input data cube).  However, if you provide the parameters
 routines won't be called and the memory usage should stay below 5 times
 the size of your input data cube.
 
-NOTE: Tested in Python 2.7 and 3.4.
+Tested in Python 2.7 and 3.4.
 """
 
 import sys
