@@ -168,7 +168,7 @@ def parse_args(argv=None):
     parser.add_argument("--otext", help="Text file where the found clumps "
                         "will be saved in a human-readable form.  If OTEXT "
                         "exists, it will be overwritten.  If set to 'None' "
-                        "(case doesn't matter), OTEXT file won't be written.  "
+                        "(case insensitive), OTEXT file won't be written.  "
                         "This will speed up the program's execution.  On the "
                         "other hand, the OTEXT file is needed for the "
                         "construction of a dendrogram.  "
