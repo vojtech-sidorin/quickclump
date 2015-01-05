@@ -74,7 +74,16 @@ import argparse
 import datetime
 
 import numpy as np
-import pyfits
+# Import FITS IO.
+# NOTE: PyFITS was merged into Astropy.
+try:
+    from astropy.io import fits
+except ImportError:
+    try:
+        import pyfits as fits
+    except ImportError:
+        sys.exit("Error: Cannot find any supported FITS IO package.  "
+                 "Do you have installed 'astropy' or 'pyfits'?")
 
 __version__ = "1.3"
 
@@ -173,7 +182,7 @@ def load_idata(ifits):
     """Load and preprocess input FITS data."""
 
     # Load the first HDU from the FITS (HDU = header data unit).
-    hdulist = pyfits.open(ifits)
+    hdulist = fits.open(ifits)
     idata = hdulist[0].data
 
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
@@ -497,7 +506,7 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
         clmask = clmask.astype("int16")
 
     # Create a new FITS HDU.  Compensate for the border.
-    ohdu = pyfits.PrimaryHDU(clmask[1:-1, 1:-1, 1:-1])
+    ohdu = fits.PrimaryHDU(clmask[1:-1, 1:-1, 1:-1])
 
     # Set the header.
     ohdu.header.update("BUNIT", "Ncl", "clump number")
