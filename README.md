@@ -2,6 +2,11 @@
 
 Identify clumps within a 3D FITS datacube.
 
+## Obtaining clumpit
+
+<https://github.com/vojtech-sidorin/clumpit>  
+<http://galaxy.asu.cas.cz/~vosidorin/clumpit.html>
+
 ## Quick start guide
 
 To find clumps in your data cube, type
