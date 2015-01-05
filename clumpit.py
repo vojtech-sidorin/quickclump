@@ -74,9 +74,18 @@ import argparse
 import datetime
 
 import numpy as np
-import pyfits
+# Import FITS IO.
+# NOTE: PyFITS was merged into Astropy.
+try:
+    from astropy.io import fits
+except ImportError:
+    try:
+        import pyfits as fits
+    except ImportError:
+        sys.exit("Error: Cannot find any supported FITS IO package.  "
+                 "Do you have installed 'astropy' or 'pyfits'?")
 
-__version__ = "1.3"
+__version__ = "1.3-1"
 
 def main(argv=None):
     try:
@@ -173,7 +182,7 @@ def load_idata(ifits):
     """Load and preprocess input FITS data."""
 
     # Load the first HDU from the FITS (HDU = header data unit).
-    hdulist = pyfits.open(ifits)
+    hdulist = fits.open(ifits)
     idata = hdulist[0].data
 
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
@@ -497,27 +506,26 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
         clmask = clmask.astype("int16")
 
     # Create a new FITS HDU.  Compensate for the border.
-    ohdu = pyfits.PrimaryHDU(clmask[1:-1, 1:-1, 1:-1])
+    ohdu = fits.PrimaryHDU(clmask[1:-1, 1:-1, 1:-1])
 
     # Set the header.
-    ohdu.header.update("BUNIT", "Ncl", "clump number")
-    ohdu.header.update(
-        "DATE",
+    ohdu.header["BUNIT"] = ("Ncl", "clump number")
+    ohdu.header["DATE"] = (
         datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"),
         "file creation date"
         )
-    ohdu.header.add_comment("File created by clumpit.py (v{version})."
-                            .format(version=__version__))
-    ohdu.header.add_comment("Original data file: '{ifits}'"
-                            .format(ifits=os.path.basename(options.ifits)))
-    ohdu.header.add_comment("clumpit.py was run with the following parameters:")
-    ohdu.header.add_comment("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
-    ohdu.header.add_comment("  Tcutoff={Tcutoff}"
-                            .format(Tcutoff=options.Tcutoff))
-    ohdu.header.add_comment("  Npxmin={Npxmin}".format(Npxmin=options.Npxmin))
-    ohdu.header.add_comment("Total clumps found: {fcc}"
-                            .format(fcc=final_clumps_count))
-    ohdu.header.add_comment(
+    ohdu.header["COMMENT"] = ("File created by clumpit.py (v{version})."
+                              .format(version=__version__))
+    ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
+                              .format(ifits=os.path.basename(options.ifits)))
+    ohdu.header["COMMENT"] = ("clumpit was run with following parameters:")
+    ohdu.header["COMMENT"] = ("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
+    ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff}"
+                              .format(Tcutoff=options.Tcutoff))
+    ohdu.header["COMMENT"] = ("  Npxmin={Npxmin}".format(Npxmin=options.Npxmin))
+    ohdu.header["COMMENT"] = ("Total clumps found: {fcc}"
+                              .format(fcc=final_clumps_count))
+    ohdu.header["COMMENT"] = (
         "This FITS file is a mask for the original data file '{ifits}'. "
         "Each pixel contains an integer that corresponds to the label of the "
         "clump that owns the pixel. Pixels marked with zeroes belong to no "
