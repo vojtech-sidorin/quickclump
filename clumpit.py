@@ -76,7 +76,7 @@ import datetime
 import numpy as np
 import pyfits
 
-__version__ = "1.2-2"
+__version__ = "1.3"
 
 def main(argv=None):
     try:
