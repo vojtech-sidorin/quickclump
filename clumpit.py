@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# df2 -- an improved implementation of DENDROFIND
+# clumpit -- an improved implementation of DENDROFIND
 #
 # Copyright 2014 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
@@ -23,17 +23,17 @@ QUICK START GUIDE
 
 To find clumps in your data cube, type
 
-    $ python df2.py my_datacube.fits
+    $ python clumpit.py my_datacube.fits
 
 To show usage help, type
 
-    $ python df2.py -h
+    $ python clumpit.py -h
 
 To run in the interactive mode, type
 
      $ python
-     >>> import df2
-     >>> df2.main(["my_datacube.fits"])
+     >>> import clumpit
+     >>> clumpit.main(["my_datacube.fits"])
 
 DESCRIPTION
 ===========
@@ -42,9 +42,9 @@ This program is an improved implementation of DENDROFIND(1) -- a clump-
 finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
 conceived by Richard Wunsch, who also published its first
 implementation in Python, later rewritten in C.  Compared to the
-original implementation, df2 uses different data structures and
-doesn't need parameter Nlevels.  df2 is also faster (about 50 000 times)
-and scales linearly with the data cube volume (number of pixels).
+original implementation, clumpit uses different data structures and
+doesn't need parameter Nlevels.  clumpit is also faster (about 50 000
+times) and scales linearly with the data cube volume (number of pixels).
 
 (1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
     description of the original DENDROFIND algorithm.  The first
@@ -506,11 +506,11 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
         datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"),
         "file creation date"
         )
-    ohdu.header.add_comment("File created by df2.py (v{version})."
+    ohdu.header.add_comment("File created by clumpit.py (v{version})."
                             .format(version=__version__))
     ohdu.header.add_comment("Original data file: '{ifits}'"
                             .format(ifits=os.path.basename(options.ifits)))
-    ohdu.header.add_comment("df2.py was run with the following parameters:")
+    ohdu.header.add_comment("clumpit.py was run with the following parameters:")
     ohdu.header.add_comment("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
     ohdu.header.add_comment("  Tcutoff={Tcutoff}"
                             .format(Tcutoff=options.Tcutoff))
@@ -548,7 +548,8 @@ def write_otext(otext, clumps, options):
         # The header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
         # compatible with the original dendrofind's textual output.  It has no
-        # real meaning for df2, because df2 doesn't use the Nlevels parameter.
+        # real meaning for clumpit, because clumpit doesn't use the Nlevels
+        # parameter.
         f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
                 "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
