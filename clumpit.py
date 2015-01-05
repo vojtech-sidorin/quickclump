@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# clumpit -- an improved implementation of DENDROFIND
+# clumpit - identify clumps within a 3D FITS datacube
 #
-# Copyright 2014 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 QUICK START GUIDE
 =================
 
-To find clumps in your data cube, type
+To find clumps in your FITS data cube, type
 
     $ python clumpit.py my_datacube.fits
 
@@ -533,9 +533,9 @@ def write_otext(otext, clumps, options):
 
     """Write clumps to the output text file.
 
-    The output text file is compatible with the original dendrofind's
-    textual output and as such can be used as an input for supportive
-    dendrofind scripts, e.g. df_dendrogram.py for plotting the dendrogram.
+    The output text file is compatible with DENDROFIND's textual output
+    and as such can be used as an input for supportive DENDROFIND's
+    scripts, e.g. df_dendrogram.py for plotting the dendrogram.
 
     If the output text file (otext) exists it will be overwritten.
     """
@@ -545,15 +545,13 @@ def write_otext(otext, clumps, options):
     assert hasattr(options, "Npxmin")
 
     with open(otext, "w") as f:
-        # The header line.
+        # Output the header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
-        # compatible with the original dendrofind's textual output.  It has no
-        # real meaning for clumpit, because clumpit doesn't use the Nlevels
-        # parameter.
+        # compatible with DENDROFIND.  It has no meaning for clumpit.
         f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
                 "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
-        # The clumps.
+        # Output the clumps.
         for clump in clumps:
             # Output only clumps which were not deleted (final_ncl > 0) or
             # merged.
