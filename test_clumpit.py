@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import shutil
 import unittest
 
 import clumpit
@@ -69,6 +71,20 @@ class TestCheckOptions(unittest.TestCase):
         self.options.dTleaf = 1.
         self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
                           self.options)
+
+class TestMain(unittest.TestCase):
+    """Test function main, i.e. the main clumpit's functionality"""
+
+    def setUp(self):
+        os.mkdir("test_tmp")
+
+    def tearDown(self):
+        shutil.rmtree("test_tmp")
+
+    def test_this_test_class(self):
+        clumpit.main("--ofits test_tmp/rand_lognormal.clumps.fits "
+                     "--otext test_tmp/rand_lognormal.clumps.txt "
+                     "fixtures/rand_lognormal.fits".split())
 
 
 if __name__ == "__main__":
