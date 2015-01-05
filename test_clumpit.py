@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-# Unit tests for df2
+# Unit tests for clumpit
 #
-# Copyright 2014 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 import unittest
 
-import df2
+import clumpit
 
 class TestCheckOptions(unittest.TestCase):
     """Test function check_options."""
@@ -29,40 +29,46 @@ class TestCheckOptions(unittest.TestCase):
 
     def test_missing_options(self):
         # Passing no options.
-        self.assertRaises(AssertionError, df2.check_options, self.options)
+        self.assertRaises(AssertionError, clumpit.check_options, self.options)
         # Missing any required option.
         required_options = ("dTleaf", "Tcutoff")
         for option in required_options:
             setattr(self.options, option, 1.)
-            self.assertRaises(AssertionError, df2.check_options, self.options)
+            self.assertRaises(AssertionError, clumpit.check_options,
+                              self.options)
             delattr(self.options, option)
 
     def test_correct_values(self):
         self.options.Tcutoff = 1.
         self.options.dTleaf = 1.
-        self.assertIsNone(df2.check_options(self.options))
+        self.assertIsNone(clumpit.check_options(self.options))
 
     def test_incorrect_values(self):
         # negative Tcutoff
         self.options.Tcutoff = -1.
         self.options.dTleaf = 1.
-        self.assertRaises(df2.OutOfBoundsError, df2.check_options, self.options)
+        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+                          self.options)
         # negative dTleaf
         self.options.Tcutoff = 1.
         self.options.dTleaf = -1.
-        self.assertRaises(df2.OutOfBoundsError, df2.check_options, self.options)
+        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+                          self.options)
         # negative Tcutoff and dTleaf
         self.options.Tcutoff = -1.
         self.options.dTleaf = -1.
-        self.assertRaises(df2.OutOfBoundsError, df2.check_options, self.options)
+        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+                          self.options)
         # nan Tcutoff
         self.options.Tcutoff = float("nan")
         self.options.dTleaf = 1.
-        self.assertRaises(df2.OutOfBoundsError, df2.check_options, self.options)
+        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+                          self.options)
         # -inf Tcutoff
         self.options.Tcutoff = float("-inf")
         self.options.dTleaf = 1.
-        self.assertRaises(df2.OutOfBoundsError, df2.check_options, self.options)
+        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+                          self.options)
 
 
 if __name__ == "__main__":
