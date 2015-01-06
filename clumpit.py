@@ -122,27 +122,33 @@ def _main(argv=None):
     # init list of clumps
     clumps = []
 
-    print("Finding clumps.")
+    if options.verbose > 0:
+        print("Finding clumps.")
     find_all_clumps(idata, clmask, clumps, options)
 
-    print("Merging small clumps.")
+    if options.verbose > 0:
+        print("Merging small clumps.")
     merge_small_clumps(clumps, options.Npxmin)
 
-    print("Renumbering clumps.")
+    if options.verbose > 0:
+        print("Renumbering clumps.")
     final_clumps_count = renumber_clumps(clumps, options.Npxmin)
     renumber_clmask(clmask, clumps)
-    print("{N} clumps found.".format(N=final_clumps_count))
+    if options.verbose >= 0:
+        print("{N} clumps found.".format(N=final_clumps_count))
     # NOTE: The clumps have now set their final labels/numbers, which are
     # stored in attribute final_ncl.
     # NOTE: Too small clumps, those with Npx < Npxmin, have set their
     # final_ncl to 0.
 
     if options.ofits.strip().upper() != "NONE":
-        print("Writing output FITS.")
+        if options.verbose > 0:
+            print("Writing output FITS.")
         write_ofits(options.ofits, clmask, final_clumps_count, options)
 
     if options.otext.strip().upper() != "NONE":
-        print("Writing output text file.")
+        if options.verbose > 0:
+            print("Writing output text file.")
         write_otext(options.otext, clumps, options)
 
 def parse_args(argv=None):
@@ -168,12 +174,17 @@ def parse_args(argv=None):
     parser.add_argument("--otext", help="Text file where the found clumps "
                         "will be saved in a human-readable form.  If OTEXT "
                         "exists, it will be overwritten.  If set to 'None' "
-                        "(case doesn't matter), OTEXT file won't be written.  "
+                        "(case insensitive), OTEXT file won't be written.  "
                         "This will speed up the program's execution.  On the "
                         "other hand, the OTEXT file is needed for the "
                         "construction of a dendrogram.  "
                         "(default: IFITS with modified extension "
                         "'.clumps.txt')")
+    parser.add_argument("--verbose", "-v", action="count", default=0,
+                        help="Increase verbosity.")
+    parser.add_argument("--silent", dest="verbose", action="store_const",
+                        const=-1, help="Suppress output to stdout.  (Set "
+                        "verbosity to a minimum.)")
     args = parser.parse_args(argv)
     return args
 
@@ -250,8 +261,9 @@ def set_defaults(options, idata):
 
     # dTleaf/Tcutoff -- 3*sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
-        print("dTleaf and/or Tcutoff not set.  Estimating from the input data "
-              "(IFITS).")
+        if options.verbose > 0:
+            print("dTleaf and/or Tcutoff not set.  Estimating from the input "
+                  "data (IFITS).")
 
         # Compute data mean and std.
         valid = idata.view(np.ma.MaskedArray)
@@ -276,15 +288,18 @@ def set_defaults(options, idata):
 
         # Set dTleaf.
         if new_options.dTleaf is None:
-            print("Setting dTleaf to {dTleaf} (= 3*std_noise = 3*{std_noise})"
-                  .format(dTleaf=3.*std_noise, std_noise=std_noise))
+            if options.verbose > 0:
+                print("Setting dTleaf to {dTleaf} (= 3*std_noise = "
+                      "3*{std_noise})"
+                      .format(dTleaf=3.*std_noise, std_noise=std_noise))
             new_options.dTleaf = 3.*std_noise
 
         # Set Tcutoff.
         if new_options.Tcutoff is None:
-            print("Setting Tcutoff to {Tcutoff} (= 3*std_noise = "
-                  "3*{std_noise})"
-                  .format(Tcutoff=3.*std_noise, std_noise=std_noise))
+            if options.verbose > 0:
+                print("Setting Tcutoff to {Tcutoff} (= 3*std_noise = "
+                      "3*{std_noise})"
+                      .format(Tcutoff=3.*std_noise, std_noise=std_noise))
             new_options.Tcutoff = 3.*std_noise
 
     return new_options
