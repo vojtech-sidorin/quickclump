@@ -4,8 +4,10 @@ Identify clumps within a 3D FITS datacube.
 
 ## Obtaining clumpit
 
-<https://github.com/vojtech-sidorin/clumpit>  
-<http://galaxy.asu.cas.cz/~vosidorin/clumpit.html>
+GitHub: <https://github.com/vojtech-sidorin/clumpit>  
+Direct download link (GitHub):
+[clumpit-master.zip](https://github.com/vojtech-sidorin/clumpit/archive/master.zip)  
+Web: <http://galaxy.asu.cas.cz/~vosidorin/clumpit.html>
 
 ## Quick start guide
 
@@ -36,6 +38,11 @@ first implementation in Python, later rewritten in C.  Compared to DENDROFIND,
 clumpit uses different data structures and doesn't need parameter `Nlevels`.
 clumpit is also faster (about 50 000 times) and scales linearly with the data
 cube volume (number of pixels).
+
+clumpit was originally written for analysing astronomical data -- radio
+observations of molecular clouds -- but its use is not limited to astronomy.
+clumpit doesn't presume anything about the origin of the input data.  It will
+find clumps in any 3-dimensional rectangular array served in a FITS file.
 
 ## Notes
 
