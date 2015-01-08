@@ -831,7 +831,8 @@ class Pixel(object):
 
     """Pixel within the data cube."""
 
-    # Relative map for neighbouring pixels
+    # Relative map for neighbouring pixels.
+    # (Sorry for breaking PEP 8 here, it just looks better this way.) :)
     neigh_map = np.array([( 0,  0, +1),
                           ( 0,  0, -1),
                           ( 0, +1,  0),
