@@ -46,6 +46,13 @@ observations of molecular clouds -- but its use is not limited to astronomy.
 clumpit doesn't presume anything about the origin of the input data.  It will
 find clumps in any 3-dimensional rectangular array served in a FITS file.
 
+## Requirements
+
+- Python 2.7/3.4 or above.
+- Python packages:
+    - numpy
+    - astropy or pyfits
+
 ## Notes
 
 -   Following my tests with real CO data, this program consumes up to 10 times
