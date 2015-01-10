@@ -127,9 +127,9 @@ class TestMain(unittest.TestCase):
                                  .format(sample_ofits, test_ofits))
             # Compare TXT results.
             sample_otext = os.path.join(self.FIXTURES_DIR, f + ".clumps.txt")
-            with open(sample_otext, "r") as g:
+            with open(sample_otext, "rb") as g:
                 sample_otext_contents = g.read()
-            with open(test_otext, "r") as h:
+            with open(test_otext, "rb") as h:
                 test_otext_contents = h.read()
             self.assertEqual(hashlib.sha512(sample_otext_contents).hexdigest(),
                              hashlib.sha512(test_otext_contents).hexdigest(),
