@@ -53,14 +53,23 @@ find clumps in any 3-dimensional rectangular array served in a FITS file.
     - numpy
     - astropy or pyfits
 
-## Notes
+## Performance tests
 
--   Following my tests with real CO data, this program consumes up to 10 times
-    the size of the input data cube.  Numpy's `std()` method is especially
-    eager for memory and takes about 6 times the size of the array (input data
-    cube).  However, if you provide the parameters `--dTleaf` and `--Tcutoff`
-    at the command-line, the memory-hungry numpy routines won't be called and
-    the memory usage should stay below 5 times the size of your input data
-    cube.
+Running clumpit on the whole LAB HI Survey (721x361x485 pixels)
+([Kalberla et al., 2005](http://adsabs.harvard.edu//abs/2005A%26A...440..775K))
+on Intel i7-4770S took 10 minutes and 870 MiB of RAM.  It found 4178 clumps.
+clumpit was run with option `--otext None`, i.e. producing no text output.
+
+Tests with real CO data from the
+[Galactic Ring Survey](http://www.bu.edu/galacticring/)
+([Jackson et al., 2006](http://adsabs.harvard.edu//abs/2006ApJS..163..145J))
+show that clumpit consumes up to 10 times the size of the input data cube.
+Numpy's `std()` method is especially eager for memory and takes about 6 times
+the size of the array (input data cube).  However, if you provide the
+parameters `--dTleaf` and `--Tcutoff` at the command-line, the memory-hungry
+numpy routines won't be called and the memory usage should stay below 5 times
+the size of your input data cube.
+
+## Notes
 
 -   Tested in Python 2.7 and 3.4.
