@@ -117,8 +117,10 @@ class TestMain(unittest.TestCase):
                          .split())
             # Compare FITS results.  Compare only data, not FITS header.
             sample_ofits = os.path.join(self.FIXTURES_DIR, f + ".clumps.fits")
-            sample_odata = fits.open(sample_ofits)[0].data  # First HDU.
-            test_odata = fits.open(test_ofits)[0].data  # First HDU.
+            with fits.open(sample_ofits) as g:
+                sample_odata = g[0].data  # First HDU.
+            with fits.open(test_ofits) as h:
+                test_odata = h[0].data  # First HDU.
             self.assertEqual(hashlib.sha512(sample_odata).hexdigest(),
                              hashlib.sha512(test_odata).hexdigest(),
                              msg="Data in FITS files '{0}' and '{1}' differ."

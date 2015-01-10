@@ -193,8 +193,8 @@ def load_idata(ifits):
     """Load and preprocess input FITS data."""
 
     # Load the first HDU from the FITS (HDU = header data unit).
-    hdulist = fits.open(ifits)
-    idata = hdulist[0].data
+    with fits.open(ifits) as f:
+        idata = f[0].data  # f[0] == the first HDU in the file.
 
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
     if idata.ndim != 3:
