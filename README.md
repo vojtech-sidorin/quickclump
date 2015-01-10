@@ -36,8 +36,10 @@ clumpit is an improved implementation of
 DENDROFIND was originally conceived by Richard Wunsch, who also published its
 first implementation in Python, later rewritten in C.  Compared to DENDROFIND,
 clumpit uses different data structures and doesn't need parameter `Nlevels`.
-clumpit is also about 50 000 times faster than the C implementation of
-DENDROFIND and scales linearly with the data cube volume (number of pixels).
+It, however, provides more accurate results -- comparable to what would provide
+DENDROFIND with parameter `Nlevels` set to infinity.  clumpit is also about
+50 000 times faster than the C implementation of DENDROFIND and scales linearly
+with the data cube volume (number of pixels).
 
 clumpit was originally written for analysing astronomical data -- radio
 observations of molecular clouds -- but its use is not limited to astronomy.
