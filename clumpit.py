@@ -85,7 +85,9 @@ except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Do you have installed 'astropy' or 'pyfits'?")
 
-__version__ = "1.3-1"
+__version__ = "1.3-2"
+
+
 
 def main(argv=None):
     try:
