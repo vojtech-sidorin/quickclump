@@ -85,7 +85,11 @@ except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Do you have installed 'astropy' or 'pyfits'?")
 
-__version__ = "1.3-1"
+__version__ = "1.3-2"
+
+DEFAULT_NPXMIN = 5
+DEFAULT_VERBOSE = 0
+SILENT_VERBOSE = -1
 
 def main(argv=None):
     try:
@@ -134,7 +138,7 @@ def _main(argv=None):
         print("Renumbering clumps.")
     final_clumps_count = renumber_clumps(clumps, options.Npxmin)
     renumber_clmask(clmask, clumps)
-    if options.verbose >= 0:
+    if options.verbose > SILENT_VERBOSE:
         print("{N} clumps found.".format(N=final_clumps_count))
     # NOTE: The clumps have now set their final labels/numbers, which are
     # stored in attribute final_ncl.
@@ -153,8 +157,8 @@ def _main(argv=None):
 
 def parse_args(argv=None):
     """Parse arguments with argparse."""
-    parser = argparse.ArgumentParser(description="Identifies clumps within a "
-                                     "3D FITS datacube.")
+    parser = argparse.ArgumentParser(
+            description="Identifies clumps within a 3D FITS datacube.")
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--dTleaf", type=float, help="Minimal depth of a "
@@ -163,8 +167,9 @@ def parse_args(argv=None):
     parser.add_argument("--Tcutoff", type=float, help="Minimal data value to "
                         "consider.  Pixels with lower values won't be "
                         "processed.  Must be > 0.  (default: 3*sig_noise)")
-    parser.add_argument("--Npxmin", type=int, default=5, help="Minimal size "
-                        "of a clump in pixels.  (default: %(default)s)")
+    parser.add_argument("--Npxmin", type=int, default=DEFAULT_NPXMIN,
+                        help="Minimal size of a clump in pixels.  "
+                        "(default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps "
                         "will be saved.  If OFITS exists, it will be "
                         "overwritten.  If set to 'None' (case doesn't "
@@ -180,11 +185,11 @@ def parse_args(argv=None):
                         "construction of a dendrogram.  "
                         "(default: IFITS with modified extension "
                         "'.clumps.txt')")
-    parser.add_argument("--verbose", "-v", action="count", default=0,
-                        help="Increase verbosity.")
+    parser.add_argument("--verbose", "-v", action="count",
+                        default=DEFAULT_VERBOSE, help="Increase verbosity.")
     parser.add_argument("--silent", dest="verbose", action="store_const",
-                        const=-1, help="Suppress output to stdout.  (Set "
-                        "verbosity to a minimum.)")
+                        const=SILENT_VERBOSE, help="Suppress output to "
+                        "stdout.  (Set verbosity to a minimum.)")
     args = parser.parse_args(argv)
     return args
 
