@@ -91,12 +91,14 @@ DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
 SILENT_VERBOSE = -1
 
+
 def main(argv=None):
     try:
         _main(argv=argv)
     except (IOError, InputDataError, OutOfBoundsError) as e:
         sys.stderr.write("{0}: {1}\n".format(e.__class__.__name__, str(e)))
         return 1
+
 
 def _main(argv=None):
     # Parse arguments: if argv is None, arguments from sys.argv will be
@@ -155,6 +157,7 @@ def _main(argv=None):
             print("Writing output text file.")
         write_otext(options.otext, clumps, options)
 
+
 def parse_args(argv=None):
     """Parse arguments with argparse."""
     parser = argparse.ArgumentParser(
@@ -193,6 +196,7 @@ def parse_args(argv=None):
     args = parser.parse_args(argv)
     return args
 
+
 def load_idata(ifits):
 
     """Load and preprocess input FITS data."""
@@ -219,6 +223,7 @@ def load_idata(ifits):
     # the fear of IndexError.
 
     return idata
+
 
 def set_defaults(options, idata):
 
@@ -309,6 +314,7 @@ def set_defaults(options, idata):
 
     return new_options
 
+
 def check_options(options):
     """Check values of dTleaf and Tcutoff."""
     assert hasattr(options, "dTleaf")
@@ -317,6 +323,7 @@ def check_options(options):
         raise OutOfBoundsError("'dTleaf' must be > 0.")
     if not (options.Tcutoff > 0.):
         raise OutOfBoundsError("'Tcutoff' must be > 0.")
+
 
 def find_all_clumps(idata, clmask, clumps, options):
 
@@ -442,6 +449,7 @@ def find_all_clumps(idata, clmask, clumps, options):
                         gp.parent = gps[j]
                         gp.dist2_min = dist2
 
+
 def merge_small_clumps(clumps, Npxmin):
     """Merge clumps with too little pixels.
 
@@ -463,6 +471,7 @@ def merge_small_clumps(clumps, Npxmin):
         elif clump.parent.get_merger().Npx < Npxmin:
             # Too small parent --> merge clump to it
             clump.merge_to_parent()
+
 
 def renumber_clumps(clumps, Npxmin):
     """Renumber clumps taking into account mergers and Npxmin limit.
@@ -496,6 +505,7 @@ def renumber_clumps(clumps, Npxmin):
             clump.final_ncl = new_ncl
     return new_ncl
 
+
 def renumber_clmask(clmask, clumps):
     """Renumber clmask according to clumps' final_ncl."""
     if not clumps:
@@ -506,6 +516,7 @@ def renumber_clmask(clmask, clumps):
                 clmask[ijk] = 0
             else:
                 clmask[ijk] = clumps[ncl].final_ncl
+
 
 def write_ofits(ofits, clmask, final_clumps_count, options):
 
@@ -556,6 +567,7 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
     if os.path.exists(ofits):
         os.remove(ofits)
     ohdu.writeto(ofits)
+
 
 def write_otext(otext, clumps, options):
 

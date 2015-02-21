@@ -36,6 +36,7 @@ except ImportError:
 
 import clumpit
 
+
 class TestCheckOptions(unittest.TestCase):
     """Test function check_options."""
 
@@ -85,6 +86,7 @@ class TestCheckOptions(unittest.TestCase):
         self.options.dTleaf = 1.
         self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
                           self.options)
+
 
 class TestMain(unittest.TestCase):
     """Test function main, i.e. the main clumpit's functionality"""
