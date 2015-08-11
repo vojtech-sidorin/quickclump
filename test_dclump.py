@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Unit tests for clumpit
+# Unit tests for Dendroclump
 #
 # Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
@@ -34,7 +34,8 @@ except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Do you have installed 'astropy' or 'pyfits'?")
 
-import clumpit
+import dclump
+
 
 class TestCheckOptions(unittest.TestCase):
     """Test function check_options."""
@@ -45,49 +46,50 @@ class TestCheckOptions(unittest.TestCase):
 
     def test_missing_options(self):
         # Passing no options.
-        self.assertRaises(AssertionError, clumpit.check_options, self.options)
+        self.assertRaises(AssertionError, dclump.check_options, self.options)
         # Missing any required option.
         required_options = ("dTleaf", "Tcutoff")
         for option in required_options:
             setattr(self.options, option, 1.)
-            self.assertRaises(AssertionError, clumpit.check_options,
+            self.assertRaises(AssertionError, dclump.check_options,
                               self.options)
             delattr(self.options, option)
 
     def test_correct_values(self):
         self.options.Tcutoff = 1.
         self.options.dTleaf = 1.
-        self.assertIsNone(clumpit.check_options(self.options))
+        self.assertIsNone(dclump.check_options(self.options))
 
     def test_incorrect_values(self):
         # negative Tcutoff
         self.options.Tcutoff = -1.
         self.options.dTleaf = 1.
-        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
                           self.options)
         # negative dTleaf
         self.options.Tcutoff = 1.
         self.options.dTleaf = -1.
-        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
                           self.options)
         # negative Tcutoff and dTleaf
         self.options.Tcutoff = -1.
         self.options.dTleaf = -1.
-        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
                           self.options)
         # nan Tcutoff
         self.options.Tcutoff = float("nan")
         self.options.dTleaf = 1.
-        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
                           self.options)
         # -inf Tcutoff
         self.options.Tcutoff = float("-inf")
         self.options.dTleaf = 1.
-        self.assertRaises(clumpit.OutOfBoundsError, clumpit.check_options,
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
                           self.options)
 
+
 class TestMain(unittest.TestCase):
-    """Test function main, i.e. the main clumpit's functionality"""
+    """Test function main, i.e. the main Dendroclump's functionality"""
 
     TMP_DIR = "./test_tmp"
     FIXTURES_DIR = "./fixtures"
@@ -105,13 +107,13 @@ class TestMain(unittest.TestCase):
         shutil.rmtree("test_tmp")
 
     def test_on_sample_input_files(self):
-        """Run clumpit on sample files and check results."""
+        """Run Dendroclump on sample files and check results."""
         for f in self.SAMPLE_FILES_PREFIXES:
             # Run main() on the sample file.
             ifits = os.path.join(self.FIXTURES_DIR, f + ".fits")
             test_ofits = os.path.join(self.TMP_DIR, f + ".clumps.fits")
             test_otext = os.path.join(self.TMP_DIR, f + ".clumps.txt")
-            clumpit.main("--ofits {ofits} --otext {otext} {ifits} --silent"
+            dclump.main("--ofits {ofits} --otext {otext} {ifits} --silent"
                          .format(ofits=test_ofits, otext=test_otext,
                                  ifits=ifits)
                          .split())

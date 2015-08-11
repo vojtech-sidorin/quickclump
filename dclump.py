@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# clumpit - identify clumps within a 3D FITS datacube
+# Dendroclump - identify clumps within a 3D FITS datacube
 #
 # Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
@@ -23,17 +23,17 @@ QUICK START GUIDE
 
 To find clumps in your FITS data cube, type
 
-    $ python clumpit.py my_datacube.fits
+    $ python dclump.py my_datacube.fits
 
 To show usage help, type
 
-    $ python clumpit.py -h
+    $ python dclump.py -h
 
 To run in the interactive mode, type
 
      $ python
-     >>> import clumpit
-     >>> clumpit.main(["my_datacube.fits"])
+     >>> import dclump
+     >>> dclump.main(["my_datacube.fits"])
 
 DESCRIPTION
 ===========
@@ -42,8 +42,8 @@ This program is an improved implementation of DENDROFIND(1) -- a clump-
 finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
 conceived by Richard Wunsch, who also published its first
 implementation in Python, later rewritten in C.  Compared to the
-original implementation, clumpit uses different data structures and
-doesn't need parameter Nlevels.  clumpit is also faster (about 50 000
+original implementation, Dendroclump uses different data structures and
+doesn't need parameter Nlevels.  Dendroclump is also faster (about 50 000
 times) and scales linearly with the data cube volume (number of pixels).
 
 (1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
@@ -91,12 +91,14 @@ DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
 SILENT_VERBOSE = -1
 
+
 def main(argv=None):
     try:
         _main(argv=argv)
     except (IOError, InputDataError, OutOfBoundsError) as e:
         sys.stderr.write("{0}: {1}\n".format(e.__class__.__name__, str(e)))
         return 1
+
 
 def _main(argv=None):
     # Parse arguments: if argv is None, arguments from sys.argv will be
@@ -155,6 +157,7 @@ def _main(argv=None):
             print("Writing output text file.")
         write_otext(options.otext, clumps, options)
 
+
 def parse_args(argv=None):
     """Parse arguments with argparse."""
     parser = argparse.ArgumentParser(
@@ -193,6 +196,7 @@ def parse_args(argv=None):
     args = parser.parse_args(argv)
     return args
 
+
 def load_idata(ifits):
 
     """Load and preprocess input FITS data."""
@@ -219,6 +223,7 @@ def load_idata(ifits):
     # the fear of IndexError.
 
     return idata
+
 
 def set_defaults(options, idata):
 
@@ -309,6 +314,7 @@ def set_defaults(options, idata):
 
     return new_options
 
+
 def check_options(options):
     """Check values of dTleaf and Tcutoff."""
     assert hasattr(options, "dTleaf")
@@ -317,6 +323,7 @@ def check_options(options):
         raise OutOfBoundsError("'dTleaf' must be > 0.")
     if not (options.Tcutoff > 0.):
         raise OutOfBoundsError("'Tcutoff' must be > 0.")
+
 
 def find_all_clumps(idata, clmask, clumps, options):
 
@@ -442,6 +449,7 @@ def find_all_clumps(idata, clmask, clumps, options):
                         gp.parent = gps[j]
                         gp.dist2_min = dist2
 
+
 def merge_small_clumps(clumps, Npxmin):
     """Merge clumps with too little pixels.
 
@@ -463,6 +471,7 @@ def merge_small_clumps(clumps, Npxmin):
         elif clump.parent.get_merger().Npx < Npxmin:
             # Too small parent --> merge clump to it
             clump.merge_to_parent()
+
 
 def renumber_clumps(clumps, Npxmin):
     """Renumber clumps taking into account mergers and Npxmin limit.
@@ -496,6 +505,7 @@ def renumber_clumps(clumps, Npxmin):
             clump.final_ncl = new_ncl
     return new_ncl
 
+
 def renumber_clmask(clmask, clumps):
     """Renumber clmask according to clumps' final_ncl."""
     if not clumps:
@@ -506,6 +516,7 @@ def renumber_clmask(clmask, clumps):
                 clmask[ijk] = 0
             else:
                 clmask[ijk] = clumps[ncl].final_ncl
+
 
 def write_ofits(ofits, clmask, final_clumps_count, options):
 
@@ -534,11 +545,11 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
         datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"),
         "file creation date"
         )
-    ohdu.header["COMMENT"] = ("File created by clumpit.py (v{version})."
-                              .format(version=__version__))
+    ohdu.header["COMMENT"] = ("File created by Dendroclump {v}."
+                              .format(v=__version__))
     ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
                               .format(ifits=os.path.basename(options.ifits)))
-    ohdu.header["COMMENT"] = ("clumpit was run with following parameters:")
+    ohdu.header["COMMENT"] = ("Dendroclump was run with following parameters:")
     ohdu.header["COMMENT"] = ("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
     ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff}"
                               .format(Tcutoff=options.Tcutoff))
@@ -556,6 +567,7 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
     if os.path.exists(ofits):
         os.remove(ofits)
     ohdu.writeto(ofits)
+
 
 def write_otext(otext, clumps, options):
 
@@ -575,7 +587,7 @@ def write_otext(otext, clumps, options):
     with open(otext, "w") as f:
         # Output the header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
-        # compatible with DENDROFIND.  It has no meaning for clumpit.
+        # compatible with DENDROFIND.  It has no meaning for Dendroclump.
         f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
                 "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
