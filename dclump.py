@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# clumpit - identify clumps within a 3D FITS datacube
+# Dendroclump - identify clumps within a 3D FITS datacube
 #
 # Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
@@ -23,17 +23,17 @@ QUICK START GUIDE
 
 To find clumps in your FITS data cube, type
 
-    $ python clumpit.py my_datacube.fits
+    $ python dclump.py my_datacube.fits
 
 To show usage help, type
 
-    $ python clumpit.py -h
+    $ python dclump.py -h
 
 To run in the interactive mode, type
 
      $ python
-     >>> import clumpit
-     >>> clumpit.main(["my_datacube.fits"])
+     >>> import dclump
+     >>> dclump.main(["my_datacube.fits"])
 
 DESCRIPTION
 ===========
@@ -42,8 +42,8 @@ This program is an improved implementation of DENDROFIND(1) -- a clump-
 finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
 conceived by Richard Wunsch, who also published its first
 implementation in Python, later rewritten in C.  Compared to the
-original implementation, clumpit uses different data structures and
-doesn't need parameter Nlevels.  clumpit is also faster (about 50 000
+original implementation, Dendroclump uses different data structures and
+doesn't need parameter Nlevels.  Dendroclump is also faster (about 50 000
 times) and scales linearly with the data cube volume (number of pixels).
 
 (1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
@@ -545,11 +545,11 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
         datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"),
         "file creation date"
         )
-    ohdu.header["COMMENT"] = ("File created by clumpit.py (v{version})."
-                              .format(version=__version__))
+    ohdu.header["COMMENT"] = ("File created by Dendroclump {v}."
+                              .format(v=__version__))
     ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
                               .format(ifits=os.path.basename(options.ifits)))
-    ohdu.header["COMMENT"] = ("clumpit was run with following parameters:")
+    ohdu.header["COMMENT"] = ("Dendroclump was run with following parameters:")
     ohdu.header["COMMENT"] = ("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
     ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff}"
                               .format(Tcutoff=options.Tcutoff))
@@ -587,7 +587,7 @@ def write_otext(otext, clumps, options):
     with open(otext, "w") as f:
         # Output the header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
-        # compatible with DENDROFIND.  It has no meaning for clumpit.
+        # compatible with DENDROFIND.  It has no meaning for Dendroclump.
         f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
                 "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
