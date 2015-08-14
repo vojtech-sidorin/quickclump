@@ -72,6 +72,7 @@ import sys
 import os
 import argparse
 import datetime
+import copy
 
 import numpy as np
 # Import FITS IO.
@@ -249,7 +250,8 @@ def set_defaults(options, idata):
     assert hasattr(options, "Tcutoff")
     assert idata.ndim == 3
 
-    new_options = options
+    # Create a shallow copy of options.
+    new_options = copy.copy(options)
 
     # ofits -- ifits with modified extension ".clumps.fits"
     if new_options.ofits is None:
