@@ -121,7 +121,9 @@ class TestParseArgs(unittest.TestCase):
     def test_correct_args(self):
         for args, expected in self.ARGS_MAP:
             parsed = vars(dclump.parse_args(args.split()))
-            self.assertDictContainsSubset(expected, parsed)
+            for parameter, value in expected.items():
+                self.assertIn(parameter, parsed)
+                self.assertEqual(value, parsed[parameter])
 
 
 class TestSetDefaults(unittest.TestCase):
