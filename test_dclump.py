@@ -168,6 +168,17 @@ class TestSetDefaults(unittest.TestCase):
         self.assertEqual(vars(dclump.set_defaults(options, idata)),
                          vars(expected))
 
+    def test_otext_not_set(self):
+        options = self.OptionsContainer()
+        options.ifits = "my_file.fits"
+        options.otext = None
+        expected = self.OptionsContainer()
+        expected.ifits = "my_file.fits"
+        expected.otext = "my_file.clumps.txt"
+        idata = self.InputDataContainer()
+        self.assertEqual(vars(dclump.set_defaults(options, idata)),
+                         vars(expected))
+
 
 class TestCheckOptions(unittest.TestCase):
     """Test function check_options."""
