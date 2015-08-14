@@ -99,7 +99,11 @@ class TestParseArgs(unittest.TestCase):
             ["my_fits.fits",
                 {
                 "ifits": "my_fits.fits",
+                "dTleaf": None,
+                "Tcutoff": None,
                 "Npxmin": dclump.DEFAULT_NPXMIN,
+                "ofits": None,
+                "otext": None,
                 "verbose": dclump.DEFAULT_VERBOSE
                 }
             ],
