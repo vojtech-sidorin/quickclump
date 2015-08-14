@@ -109,6 +109,12 @@ class TestParseArgs(unittest.TestCase):
                 "otext": "clumps.txt",
                 "verbose": 3
                 }
+            ],
+            ["my_fits.fits --silent",
+                {
+                "ifits": "my_fits.fits",
+                "verbose": dclump.SILENT_VERBOSE
+                }
             ]
             ]
 
@@ -116,6 +122,45 @@ class TestParseArgs(unittest.TestCase):
         for args, expected in self.ARGS_MAP:
             parsed = vars(dclump.parse_args(args.split()))
             self.assertDictContainsSubset(expected, parsed)
+
+
+class TestSetDefaults(unittest.TestCase):
+    """Test function set_defaults."""
+
+    class OptionsContainer(object):
+        def __init__(self):
+            self.ifits = "my_fits.fits"
+            self.ofits = "output.fits"
+            self.otext = "clumps.txt"
+            self.dTleaf = 1.234
+            self.Tcutoff = 2.345
+
+    class InputDataContainer(object):
+        def __init__(self):
+            self.ndim = 3
+
+    def test_dont_return_same_object(self):
+        options = self.OptionsContainer()
+        idata = self.InputDataContainer()
+        self.assertIsNot(dclump.set_defaults(options, idata), options)
+
+    def test_all_options_set(self):
+        options = self.OptionsContainer()
+        idata = self.InputDataContainer()
+        expected = self.OptionsContainer()
+        self.assertEqual(vars(dclump.set_defaults(options, idata)),
+                         vars(expected))
+
+    def test_ofits_not_set(self):
+        options = self.OptionsContainer()
+        options.ifits = "my_file.fits"
+        options.ofits = None
+        expected = self.OptionsContainer()
+        expected.ifits = "my_file.fits"
+        expected.ofits = "my_file.clumps.fits"
+        idata = self.InputDataContainer()
+        self.assertEqual(vars(dclump.set_defaults(options, idata)),
+                         vars(expected))
 
 
 class TestCheckOptions(unittest.TestCase):
