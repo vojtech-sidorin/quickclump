@@ -91,6 +91,10 @@ class TestMain(unittest.TestCase):
 class TestParseArgs(unittest.TestCase):
     """Test function parse_args."""
 
+    # Map command line argument strings to dicts with expected parsed
+    # options.  For the test to pass, all the expected options with
+    # the expected values must be found in the namespace returned by
+    # function parse_args.
     ARGS_MAP = [
             ["my_fits.fits",
                 {
