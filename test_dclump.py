@@ -134,6 +134,34 @@ class TestParseArgs(unittest.TestCase):
                 self.assertEqual(value, parsed[parameter])
 
 
+class TestLoadIdata(unittest.TestCase):
+    """Test function load_idata."""
+
+    NON_3D_FITS = ["./fixtures/1d.fits",
+                   "./fixtures/2d.fits",
+                   "./fixtures/4d.fits"]
+
+    THREE_DIM_FITS = ["./fixtures/3d.fits",
+                      "./fixtures/rand_normal.fits",
+                      "./fixtures/rand_uniform.fits"]
+
+    def test_non_3d_fits(self):
+        for filename in self.NON_3D_FITS:
+            self.assertRaises(dclump.InputDataError,
+                              dclump.load_idata, filename)
+
+    def test_3d_fits(self):
+        for filename in self.THREE_DIM_FITS:
+            idata = dclump.load_idata(filename)
+            self.assertEqual(idata.ndim, 3)
+
+    def test_if_border_minus_inf(self):
+        """Test if idata are surrounded with -inf border."""
+        for filename in self.THREE_DIM_FITS:
+            idata = dclump.load_idata(filename)
+            self.assertTrue(np.all(np.isneginf(idata[0,:,:])))
+
+
 class TestSetDefaults(unittest.TestCase):
     """Test function set_defaults."""
 
