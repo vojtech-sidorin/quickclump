@@ -206,6 +206,11 @@ def load_idata(ifits):
     with fits.open(ifits) as f:
         idata = f[0].data  # f[0] == the first HDU in the file.
 
+    # If idata is of integral type, convert to float.  This is to allow
+    # the addition of a border around the idata with values of -inf.
+    if np.issubdtype(idata.dtype, np.integer):
+        idata = idata.astype("f8")
+
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
     if idata.ndim != 3:
         raise InputDataError("The input FITS file must contain 3D data (in "
