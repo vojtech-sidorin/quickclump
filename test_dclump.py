@@ -160,6 +160,11 @@ class TestLoadIdata(unittest.TestCase):
         for filename in self.THREE_DIM_FITS:
             idata = dclump.load_idata(filename)
             self.assertTrue(np.all(np.isneginf(idata[0,:,:])))
+            self.assertTrue(np.all(np.isneginf(idata[-1,:,:])))
+            self.assertTrue(np.all(np.isneginf(idata[:,0,:])))
+            self.assertTrue(np.all(np.isneginf(idata[:,-1,:])))
+            self.assertTrue(np.all(np.isneginf(idata[:,:,0])))
+            self.assertTrue(np.all(np.isneginf(idata[:,:,-1])))
 
 
 class TestSetDefaults(unittest.TestCase):
