@@ -615,7 +615,16 @@ class OutOfBoundsError(Exception):
     """Error signaling that a variable is out of expected bounds."""
 
 
-class Clump(object):
+class PixelLike(object):
+
+    """Pixel-like objects living in idata."""
+
+    def dist2(self, other):
+        """Return square of the distance to other object."""
+        return ((self.xyz-other.xyz)**2).sum()
+
+
+class Clump(PixelLike):
 
     """Clump found within the data cube."""
 
@@ -627,6 +636,7 @@ class Clump(object):
          ncl -- number/label for this clump
          px  -- the first pixel of the clump (peak)
         """
+        super(Clump, self).__init__()
         # Clump label
         self.ncl = ncl
         # Final clump label to be set during last renumbering.
@@ -664,10 +674,6 @@ class Clump(object):
             return self.parent.get_grandparent()
         else:
             return self
-
-    def dist2(self, other):
-        """Return square of the distance to the other clump or pixel."""
-        return ((self.xyz-other.xyz)**2).sum()
 
     def merge_to_parent(self):
 
@@ -851,7 +857,7 @@ class Clump(object):
         return str_
 
 
-class Pixel(object):
+class Pixel(PixelLike):
 
     """Pixel within the data cube."""
 
@@ -865,6 +871,7 @@ class Pixel(object):
                           (-1,  0,  0)], dtype=int)
 
     def __init__(self, ijk, idata, clmask, clumps):
+        super(Pixel, self).__init__()
         # (i,j,k) coordinates
         self.ijk = np.array(ijk, dtype=int)
         # (x,y,z) coordinates
@@ -910,10 +917,6 @@ class Pixel(object):
                 grandparents.append(grandparent)
         grandparents.sort(key=lambda clump: clump.ncl)
         return grandparents
-
-    def dist2(self, other):
-        """Return square of the distance to other pixel or clump."""
-        return ((self.xyz-other.xyz)**2).sum()
 
     def addto(self, clump):
         """Add pixel to clump."""
