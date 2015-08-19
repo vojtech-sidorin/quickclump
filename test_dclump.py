@@ -37,57 +37,6 @@ except ImportError:
 import dclump
 
 
-class TestCheckOptions(unittest.TestCase):
-    """Test function check_options."""
-
-    def setUp(self):
-        class Empty(object): pass
-        self.options = Empty()
-
-    def test_missing_options(self):
-        # Passing no options.
-        self.assertRaises(AssertionError, dclump.check_options, self.options)
-        # Missing any required option.
-        required_options = ("dTleaf", "Tcutoff")
-        for option in required_options:
-            setattr(self.options, option, 1.)
-            self.assertRaises(AssertionError, dclump.check_options,
-                              self.options)
-            delattr(self.options, option)
-
-    def test_correct_values(self):
-        self.options.Tcutoff = 1.
-        self.options.dTleaf = 1.
-        self.assertIsNone(dclump.check_options(self.options))
-
-    def test_incorrect_values(self):
-        # negative Tcutoff
-        self.options.Tcutoff = -1.
-        self.options.dTleaf = 1.
-        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
-                          self.options)
-        # negative dTleaf
-        self.options.Tcutoff = 1.
-        self.options.dTleaf = -1.
-        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
-                          self.options)
-        # negative Tcutoff and dTleaf
-        self.options.Tcutoff = -1.
-        self.options.dTleaf = -1.
-        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
-                          self.options)
-        # nan Tcutoff
-        self.options.Tcutoff = float("nan")
-        self.options.dTleaf = 1.
-        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
-                          self.options)
-        # -inf Tcutoff
-        self.options.Tcutoff = float("-inf")
-        self.options.dTleaf = 1.
-        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
-                          self.options)
-
-
 class TestMain(unittest.TestCase):
     """Test function main, i.e. the main Dendroclump's functionality"""
 
@@ -137,6 +86,186 @@ class TestMain(unittest.TestCase):
                              hashlib.sha512(test_otext_contents).hexdigest(),
                              msg="Files '{0}' and {1} differ."
                                  .format(sample_otext, test_otext))
+
+
+class TestParseArgs(unittest.TestCase):
+    """Test function parse_args."""
+
+    # Map command line argument strings to dicts with expected parsed
+    # options.  For the test to pass, all the expected options with
+    # the expected values must be found in the namespace returned by
+    # function parse_args.
+    ARGS_MAP = [
+            ["my_fits.fits",
+                {
+                "ifits": "my_fits.fits",
+                "dTleaf": None,
+                "Tcutoff": None,
+                "Npxmin": dclump.DEFAULT_NPXMIN,
+                "ofits": None,
+                "otext": None,
+                "verbose": dclump.DEFAULT_VERBOSE
+                }
+            ],
+            ["my_fits.fits --dTleaf 1.234 --Tcutoff 2.345 --Npxmin 3 "
+                "--ofits out.fits --otext clumps.txt -vvv",
+                {
+                "dTleaf": 1.234,
+                "Tcutoff": 2.345,
+                "Npxmin": 3,
+                "ofits": "out.fits",
+                "otext": "clumps.txt",
+                "verbose": 3
+                }
+            ],
+            ["my_fits.fits --silent",
+                {
+                "ifits": "my_fits.fits",
+                "verbose": dclump.SILENT_VERBOSE
+                }
+            ]
+            ]
+
+    def test_correct_args(self):
+        for args, expected in self.ARGS_MAP:
+            parsed = vars(dclump.parse_args(args.split()))
+            for parameter, value in expected.items():
+                self.assertIn(parameter, parsed)
+                self.assertEqual(value, parsed[parameter])
+
+
+class TestLoadIdata(unittest.TestCase):
+    """Test function load_idata."""
+
+    NON_3D_FITS = ["./fixtures/1d.fits",
+                   "./fixtures/2d.fits",
+                   "./fixtures/4d.fits"]
+
+    THREE_DIM_FITS = ["./fixtures/3d.fits",
+                      "./fixtures/rand_normal.fits",
+                      "./fixtures/rand_uniform.fits"]
+
+    def test_non_3d_fits(self):
+        for filename in self.NON_3D_FITS:
+            self.assertRaises(dclump.InputDataError,
+                              dclump.load_idata, filename)
+
+    def test_3d_fits(self):
+        for filename in self.THREE_DIM_FITS:
+            idata = dclump.load_idata(filename)
+            self.assertEqual(idata.ndim, 3)
+
+    def test_if_border_minus_inf(self):
+        """Test if idata are surrounded with -inf border."""
+        for filename in self.THREE_DIM_FITS:
+            idata = dclump.load_idata(filename)
+            self.assertTrue(np.all(np.isneginf(idata[0,:,:])))
+            self.assertTrue(np.all(np.isneginf(idata[-1,:,:])))
+            self.assertTrue(np.all(np.isneginf(idata[:,0,:])))
+            self.assertTrue(np.all(np.isneginf(idata[:,-1,:])))
+            self.assertTrue(np.all(np.isneginf(idata[:,:,0])))
+            self.assertTrue(np.all(np.isneginf(idata[:,:,-1])))
+
+
+class TestSetDefaults(unittest.TestCase):
+    """Test function set_defaults."""
+
+    class OptionsContainer(object):
+        def __init__(self):
+            self.ifits = "my_fits.fits"
+            self.ofits = "output.fits"
+            self.otext = "clumps.txt"
+            self.dTleaf = 1.234
+            self.Tcutoff = 2.345
+
+    class InputDataContainer(object):
+        def __init__(self):
+            self.ndim = 3
+
+    def test_dont_return_same_object(self):
+        options = self.OptionsContainer()
+        idata = self.InputDataContainer()
+        self.assertIsNot(dclump.set_defaults(options, idata), options)
+
+    def test_all_options_set(self):
+        options = self.OptionsContainer()
+        idata = self.InputDataContainer()
+        expected = self.OptionsContainer()
+        self.assertEqual(vars(dclump.set_defaults(options, idata)),
+                         vars(expected))
+
+    def test_ofits_not_set(self):
+        options = self.OptionsContainer()
+        options.ifits = "my_file.fits"
+        options.ofits = None
+        expected = self.OptionsContainer()
+        expected.ifits = "my_file.fits"
+        expected.ofits = "my_file.clumps.fits"
+        idata = self.InputDataContainer()
+        self.assertEqual(vars(dclump.set_defaults(options, idata)),
+                         vars(expected))
+
+    def test_otext_not_set(self):
+        options = self.OptionsContainer()
+        options.ifits = "my_file.fits"
+        options.otext = None
+        expected = self.OptionsContainer()
+        expected.ifits = "my_file.fits"
+        expected.otext = "my_file.clumps.txt"
+        idata = self.InputDataContainer()
+        self.assertEqual(vars(dclump.set_defaults(options, idata)),
+                         vars(expected))
+
+
+class TestCheckOptions(unittest.TestCase):
+    """Test function check_options."""
+
+    def setUp(self):
+        class Empty(object): pass
+        self.options = Empty()
+
+    def test_missing_options(self):
+        # Passing no options.
+        self.assertRaises(AssertionError, dclump.check_options, self.options)
+        # Missing any required option.
+        required_options = ("dTleaf", "Tcutoff")
+        for option in required_options:
+            setattr(self.options, option, 1.)
+            self.assertRaises(AssertionError, dclump.check_options,
+                              self.options)
+            delattr(self.options, option)
+
+    def test_correct_values(self):
+        self.options.Tcutoff = 1.
+        self.options.dTleaf = 1.
+        self.assertIsNone(dclump.check_options(self.options))
+
+    def test_incorrect_values(self):
+        # negative Tcutoff
+        self.options.Tcutoff = -1.
+        self.options.dTleaf = 1.
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
+                          self.options)
+        # negative dTleaf
+        self.options.Tcutoff = 1.
+        self.options.dTleaf = -1.
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
+                          self.options)
+        # negative Tcutoff and dTleaf
+        self.options.Tcutoff = -1.
+        self.options.dTleaf = -1.
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
+                          self.options)
+        # nan Tcutoff
+        self.options.Tcutoff = float("nan")
+        self.options.dTleaf = 1.
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
+                          self.options)
+        # -inf Tcutoff
+        self.options.Tcutoff = float("-inf")
+        self.options.dTleaf = 1.
+        self.assertRaises(dclump.OutOfBoundsError, dclump.check_options,
+                          self.options)
 
 
 if __name__ == "__main__":
