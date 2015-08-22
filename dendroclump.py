@@ -173,6 +173,8 @@ def parse_args(argv=None):
                         "processed.  Must be > 0.  (default: 3*sig_noise)")
     parser.add_argument("--Npxmin", type=int, default=DEFAULT_NPXMIN,
                         help="Minimal size of a clump in pixels.  "
+                        "Smaller clumps will be either merged to adjacent "
+                        "clumps or deleted.  "
                         "(default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps "
                         "will be saved.  If OFITS exists, it will be "
