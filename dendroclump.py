@@ -180,7 +180,7 @@ def parse_args(argv=None):
                         "will be saved.  If OFITS exists, it will be "
                         "overwritten.  If set to 'None' (case doesn't "
                         "matter), OFITS file won't be written.  "
-                        "(default: IFITS with modified extension "
+                        "(default: ifits with modified extension "
                         "'.clumps.fits')")
     parser.add_argument("--otext", help="Text file where the found clumps "
                         "will be saved in a human-readable form.  If OTEXT "
@@ -189,7 +189,7 @@ def parse_args(argv=None):
                         "This will speed up the program's execution.  On the "
                         "other hand, the OTEXT file is needed for the "
                         "construction of a dendrogram.  "
-                        "(default: IFITS with modified extension "
+                        "(default: ifits with modified extension "
                         "'.clumps.txt')")
     parser.add_argument("--verbose", "-v", action="count",
                         default=DEFAULT_VERBOSE, help="Increase verbosity.")
