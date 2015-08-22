@@ -13,17 +13,17 @@ Web: <http://galaxy.asu.cas.cz/~vosidorin/dendroclump.html>
 
 To find clumps in your FITS data cube, type
 
-    $ python dclump.py my_datacube.fits
+    $ python dendroclump.py my_datacube.fits
 
 To show usage help, type
 
-    $ python dclump.py -h
+    $ python dendroclump.py -h
 
 To run in interactive mode, type
 
      $ python
-     >>> import dclump
-     >>> dclump.main(["my_datacube.fits"])
+     >>> import dendroclump
+     >>> dendroclump.main(["my_datacube.fits"])
 
 ## Description
 
