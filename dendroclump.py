@@ -35,37 +35,7 @@ To run in the interactive mode, type
      >>> import dendroclump
      >>> dendroclump.main(["my_datacube.fits"])
 
-DESCRIPTION
-===========
-
-This program is an improved implementation of DENDROFIND(1) -- a clump-
-finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
-conceived by Richard Wunsch, who also published its first
-implementation in Python, later rewritten in C.  Compared to the
-original implementation, Dendroclump uses different data structures and
-doesn't need parameter Nlevels.  Dendroclump is also faster (about 50 000
-times) and scales linearly with the data cube volume (number of pixels).
-
-(1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
-    description of the original DENDROFIND algorithm.  The first
-    practical use together with another description was published by
-    Wunsch et al. (2012), see
-    <http://adsabs.harvard.edu/abs/2012A%26A...539A.116W>.
-(2) See <http://www.ifa.hawaii.edu/users/jpw/clumpfind.shtml> or
-    <http://adsabs.harvard.edu/abs/1994ApJ...428..693W>.
-
-NOTES
-=====
-
-Following my tests with real CO data, this program consumes up to
-10 times the size of the input data cube.  Numpy's std() method is
-especially eager for memory and takes about 6 times the size of the
-array (input data cube).  However, if you provide the parameters
---dTleaf and --Tcutoff at the command-line, the memory-hungry numpy
-routines won't be called and the memory usage should stay below 5 times
-the size of your input data cube.
-
-Tested in Python 2.7 and 3.4.
+For more information, see README.md.
 """
 
 import sys
