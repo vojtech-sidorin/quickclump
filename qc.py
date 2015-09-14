@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Dendroclump - identify clumps within a 3D FITS datacube
+# Quickclump - identify clumps within a 3D FITS datacube.
 #
 # Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
@@ -23,17 +23,17 @@ QUICK START GUIDE
 
 To find clumps in your FITS data cube, type
 
-    $ python dendroclump.py my_datacube.fits
+    $ python qc.py my_datacube.fits
 
 To show usage help, type
 
-    $ python dendroclump.py -h
+    $ python qc.py -h
 
 To run in the interactive mode, type
 
      $ python
-     >>> import dendroclump
-     >>> dendroclump.main(["my_datacube.fits"])
+     >>> import qc
+     >>> qc.main(["my_datacube.fits"])
 
 For more information, see README.md.
 """
@@ -524,11 +524,11 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
         datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"),
         "file creation date"
         )
-    ohdu.header["COMMENT"] = ("File created by Dendroclump {v}."
+    ohdu.header["COMMENT"] = ("File created by Quickclump {v}."
                               .format(v=__version__))
     ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
                               .format(ifits=os.path.basename(options.ifits)))
-    ohdu.header["COMMENT"] = ("Dendroclump was run with following parameters:")
+    ohdu.header["COMMENT"] = ("Quickclump was run with following parameters:")
     ohdu.header["COMMENT"] = ("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
     ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff}"
                               .format(Tcutoff=options.Tcutoff))
@@ -566,7 +566,7 @@ def write_otext(otext, clumps, options):
     with open(otext, "w") as f:
         # Output the header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
-        # compatible with DENDROFIND.  It has no meaning for Dendroclump.
+        # compatible with DENDROFIND.  It has no meaning for Quickclump.
         f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
                 "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
