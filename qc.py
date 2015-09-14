@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Dendroclump - identify clumps within a 3D FITS datacube
+# Quickclump - identify clumps within a 3D FITS datacube.
 #
 # Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
@@ -23,49 +23,19 @@ QUICK START GUIDE
 
 To find clumps in your FITS data cube, type
 
-    $ python dendroclump.py my_datacube.fits
+    $ python qc.py my_datacube.fits
 
 To show usage help, type
 
-    $ python dendroclump.py -h
+    $ python qc.py -h
 
 To run in the interactive mode, type
 
      $ python
-     >>> import dendroclump
-     >>> dendroclump.main(["my_datacube.fits"])
+     >>> import qc
+     >>> qc.main(["my_datacube.fits"])
 
-DESCRIPTION
-===========
-
-This program is an improved implementation of DENDROFIND(1) -- a clump-
-finding algorithm inspired by Clumpfind(2).  DENDROFIND was originally
-conceived by Richard Wunsch, who also published its first
-implementation in Python, later rewritten in C.  Compared to the
-original implementation, Dendroclump uses different data structures and
-doesn't need parameter Nlevels.  Dendroclump is also faster (about 50 000
-times) and scales linearly with the data cube volume (number of pixels).
-
-(1) See <http://galaxy.asu.cas.cz/~richard/dendrofind/> for a
-    description of the original DENDROFIND algorithm.  The first
-    practical use together with another description was published by
-    Wunsch et al. (2012), see
-    <http://adsabs.harvard.edu/abs/2012A%26A...539A.116W>.
-(2) See <http://www.ifa.hawaii.edu/users/jpw/clumpfind.shtml> or
-    <http://adsabs.harvard.edu/abs/1994ApJ...428..693W>.
-
-NOTES
-=====
-
-Following my tests with real CO data, this program consumes up to
-10 times the size of the input data cube.  Numpy's std() method is
-especially eager for memory and takes about 6 times the size of the
-array (input data cube).  However, if you provide the parameters
---dTleaf and --Tcutoff at the command-line, the memory-hungry numpy
-routines won't be called and the memory usage should stay below 5 times
-the size of your input data cube.
-
-Tested in Python 2.7 and 3.4.
+For more information, see README.md.
 """
 
 import sys
@@ -86,7 +56,7 @@ except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Do you have installed 'astropy' or 'pyfits'?")
 
-__version__ = "1.3-2"
+__version__ = "1.4"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
@@ -173,12 +143,14 @@ def parse_args(argv=None):
                         "processed.  Must be > 0.  (default: 3*sig_noise)")
     parser.add_argument("--Npxmin", type=int, default=DEFAULT_NPXMIN,
                         help="Minimal size of a clump in pixels.  "
+                        "Smaller clumps will be either merged to adjacent "
+                        "clumps or deleted.  "
                         "(default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps "
                         "will be saved.  If OFITS exists, it will be "
                         "overwritten.  If set to 'None' (case doesn't "
                         "matter), OFITS file won't be written.  "
-                        "(default: IFITS with modified extension "
+                        "(default: ifits with modified extension "
                         "'.clumps.fits')")
     parser.add_argument("--otext", help="Text file where the found clumps "
                         "will be saved in a human-readable form.  If OTEXT "
@@ -187,7 +159,7 @@ def parse_args(argv=None):
                         "This will speed up the program's execution.  On the "
                         "other hand, the OTEXT file is needed for the "
                         "construction of a dendrogram.  "
-                        "(default: IFITS with modified extension "
+                        "(default: ifits with modified extension "
                         "'.clumps.txt')")
     parser.add_argument("--verbose", "-v", action="count",
                         default=DEFAULT_VERBOSE, help="Increase verbosity.")
@@ -552,11 +524,11 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
         datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"),
         "file creation date"
         )
-    ohdu.header["COMMENT"] = ("File created by Dendroclump {v}."
+    ohdu.header["COMMENT"] = ("File created by Quickclump {v}."
                               .format(v=__version__))
     ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
                               .format(ifits=os.path.basename(options.ifits)))
-    ohdu.header["COMMENT"] = ("Dendroclump was run with following parameters:")
+    ohdu.header["COMMENT"] = ("Quickclump was run with following parameters:")
     ohdu.header["COMMENT"] = ("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
     ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff}"
                               .format(Tcutoff=options.Tcutoff))
@@ -594,7 +566,7 @@ def write_otext(otext, clumps, options):
     with open(otext, "w") as f:
         # Output the header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
-        # compatible with DENDROFIND.  It has no meaning for Dendroclump.
+        # compatible with DENDROFIND.  It has no meaning for Quickclump.
         f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
                 "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
                 .format(options=options))
