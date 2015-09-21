@@ -60,7 +60,15 @@ __version__ = "1.4"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
+# The verbose level set by option --silent.
 SILENT_VERBOSE = -1
+# Relative map of the pixel neighbourhood.
+PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
+                       ( 0,  0, -1),
+                       ( 0, +1,  0),
+                       ( 0, -1,  0),
+                       (+1,  0,  0),
+                       (-1,  0,  0))
 
 
 def main(argv=None):
@@ -833,15 +841,6 @@ class Pixel(PixelLike):
 
     """Pixel within the data cube."""
 
-    # Relative map for neighbouring pixels.
-    # (Sorry for breaking PEP 8 here, it just looks better this way.) :)
-    neigh_map = np.array([( 0,  0, +1),
-                          ( 0,  0, -1),
-                          ( 0, +1,  0),
-                          ( 0, -1,  0),
-                          (+1,  0,  0),
-                          (-1,  0,  0)], dtype=int)
-
     def __init__(self, ijk, idata, clmask, clumps):
         super(Pixel, self).__init__()
         # (i,j,k) coordinates
@@ -863,7 +862,7 @@ class Pixel(PixelLike):
         The list of neighbours is sorted: clumps with lower ncl first.
         """
         neighbours = []
-        for shift in self.neigh_map:
+        for shift in PIXEL_NEIGHBOURHOOD:
             ncl = self.clmask[tuple(self.ijk + shift)]
             if ncl > -1:
                 neighbour = self.clumps[ncl].get_merger()
