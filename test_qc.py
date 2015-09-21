@@ -38,60 +38,19 @@ except ImportError:
 import qc
 
 
-class TestMain(unittest.TestCase):
-    """Integration testing: Test function main.
+class TestModuleConstants(unittest.TestCase):
+    """Test module-level constants."""
 
-    Let Quickclump process sample FITS files and compare the output
-    with expected results.
-    """
+    CONSTANTS_NAMES = ["DEFAULT_NPXMIN",
+                       "DEFAULT_VERBOSE",
+                       "SILENT_VERBOSE",
+                       "PIXEL_NEIGHBOURHOOD"]
 
-    FIXTURES_DIR = "./fixtures"
-    SAMPLE_FILES_PREFIXES = ["rand_normal",
-                             "rand_uniform"]
-
-    def setUp(self):
-        # Test outputs will be stored in this tmp dir.
-        self.tmpd = tempfile.mkdtemp(prefix="qc-")
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpd)
-
-    def test_on_sample_input_files(self):
-        """Run main() on sample files and check results."""
-        for f in self.SAMPLE_FILES_PREFIXES:
-
-            # Run main() on the sample file.
-            ifits = os.path.join(self.FIXTURES_DIR, f + ".fits")
-            test_ofits = os.path.join(self.tmpd, f + ".clumps.fits")
-            test_otext = os.path.join(self.tmpd, f + ".clumps.txt")
-            qc.main("--ofits {ofits} --otext {otext} {ifits} --silent"
-                    .format(ofits=test_ofits, otext=test_otext, ifits=ifits)
-                    .split())
-
-            # Compare FITS results.  Compare only data, not FITS header.
-            # NOTE: The FITS header will contain a timestamp, so we compare
-            # only data.
-            expected_ofits = os.path.join(self.FIXTURES_DIR, f + ".clumps.fits")
-            with fits.open(expected_ofits) as g:
-                expected_odata = g[0].data  # First HDU.
-            with fits.open(test_ofits) as h:
-                test_odata = h[0].data  # First HDU.
-            self.assertEqual(hashlib.sha512(expected_odata).hexdigest(),
-                             hashlib.sha512(test_odata).hexdigest(),
-                             msg="Data in FITS files '{0}' and '{1}' differ."
-                                 .format(expected_ofits, test_ofits))
-
-            # Compare TXT results.
-            expected_otext = os.path.join(self.FIXTURES_DIR, f + ".clumps.txt")
-            with open(expected_otext, "rb") as g:
-                expected_otext_contents = g.read()
-            with open(test_otext, "rb") as h:
-                test_otext_contents = h.read()
-            self.assertEqual(
-                    hashlib.sha512(expected_otext_contents).hexdigest(),
-                    hashlib.sha512(test_otext_contents).hexdigest(),
-                    msg="Files '{0}' and {1} differ."
-                        .format(expected_otext, test_otext))
+    def test_if_constants_set(self):
+        for constant_name in self.CONSTANTS_NAMES:
+            msg = ("Missing expected constant '{0}' in module 'qc'."
+                   .format(constant_name))
+            self.assertTrue(hasattr(qc,constant_name), msg)
 
 
 class TestParseArgs(unittest.TestCase):
@@ -262,6 +221,62 @@ class TestCheckOptions(unittest.TestCase):
         self.options.Tcutoff = float("-inf")
         self.options.dTleaf = 1.
         self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
+
+
+class TestMain(unittest.TestCase):
+    """Integration testing: Test function main.
+
+    Let Quickclump process sample FITS files and compare the output
+    with expected results.
+    """
+
+    FIXTURES_DIR = "./fixtures"
+    SAMPLE_FILES_PREFIXES = ["rand_normal",
+                             "rand_uniform"]
+
+    def setUp(self):
+        # Test outputs will be stored in this tmp dir.
+        self.tmpd = tempfile.mkdtemp(prefix="qc-")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpd)
+
+    def test_on_sample_input_files(self):
+        """Run main() on sample files and check results."""
+        for f in self.SAMPLE_FILES_PREFIXES:
+
+            # Run main() on the sample file.
+            ifits = os.path.join(self.FIXTURES_DIR, f + ".fits")
+            test_ofits = os.path.join(self.tmpd, f + ".clumps.fits")
+            test_otext = os.path.join(self.tmpd, f + ".clumps.txt")
+            qc.main("--ofits {ofits} --otext {otext} {ifits} --silent"
+                    .format(ofits=test_ofits, otext=test_otext, ifits=ifits)
+                    .split())
+
+            # Compare FITS results.  Compare only data, not FITS header.
+            # NOTE: The FITS header will contain a timestamp, so we compare
+            # only data.
+            expected_ofits = os.path.join(self.FIXTURES_DIR, f + ".clumps.fits")
+            with fits.open(expected_ofits) as g:
+                expected_odata = g[0].data  # First HDU.
+            with fits.open(test_ofits) as h:
+                test_odata = h[0].data  # First HDU.
+            self.assertEqual(hashlib.sha512(expected_odata).hexdigest(),
+                             hashlib.sha512(test_odata).hexdigest(),
+                             msg="Data in FITS files '{0}' and '{1}' differ."
+                                 .format(expected_ofits, test_ofits))
+
+            # Compare TXT results.
+            expected_otext = os.path.join(self.FIXTURES_DIR, f + ".clumps.txt")
+            with open(expected_otext, "rb") as g:
+                expected_otext_contents = g.read()
+            with open(test_otext, "rb") as h:
+                test_otext_contents = h.read()
+            self.assertEqual(
+                    hashlib.sha512(expected_otext_contents).hexdigest(),
+                    hashlib.sha512(test_otext_contents).hexdigest(),
+                    msg="Files '{0}' and {1} differ."
+                        .format(expected_otext, test_otext))
 
 
 if __name__ == "__main__":
