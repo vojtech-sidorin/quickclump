@@ -238,18 +238,26 @@ class TestMain(unittest.TestCase):
                     .format(ofits=test_ofits, otext=test_otext, ifits=ifits)
                     .split())
 
-            # Compare FITS results.  Compare only data, not FITS header.
-            # NOTE: The FITS header will contain a timestamp, so we compare
-            # only data.
+            # Compare FITS results.
             expected_ofits = os.path.join(self.FIXTURES_DIR, f + ".clumps.fits")
             with fits.open(expected_ofits) as g:
-                expected_odata = g[0].data  # First HDU.
+                expected_odata = g[0].data
+                expected_header = g[0].header
             with fits.open(test_ofits) as h:
-                test_odata = h[0].data  # First HDU.
+                test_odata = h[0].data
+                test_header = h[0].header
+            # Compare data.
             self.assertEqual(hashlib.sha512(expected_odata).hexdigest(),
                              hashlib.sha512(test_odata).hexdigest(),
                              msg="Data in FITS files '{0}' and '{1}' differ."
                                  .format(expected_ofits, test_ofits))
+            # Compare header.
+            # Before comparison, remove the card DATE from the header.  This
+            # card will contain a timestamp of the file creation and should be
+            # excluded from the comparison.
+            del expected_header["DATE"]
+            del test_header["DATE"]
+            self.assertSequenceEqual(expected_header, test_header)
 
             # Compare TXT results.
             expected_otext = os.path.join(self.FIXTURES_DIR, f + ".clumps.txt")
