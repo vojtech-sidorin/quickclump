@@ -537,8 +537,9 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
     ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
                               .format(ifits=os.path.basename(options.ifits)))
     ohdu.header["COMMENT"] = ("Quickclump was run with following parameters:")
-    ohdu.header["COMMENT"] = ("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
-    ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff}"
+    ohdu.header["COMMENT"] = ("  dTleaf={dTleaf:.12g}"
+                              .format(dTleaf=options.dTleaf))
+    ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff:.12g}"
                               .format(Tcutoff=options.Tcutoff))
     ohdu.header["COMMENT"] = ("  Npxmin={Npxmin}".format(Npxmin=options.Npxmin))
     ohdu.header["COMMENT"] = ("Total clumps found: {fcc}"
