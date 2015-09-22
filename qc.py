@@ -60,7 +60,15 @@ __version__ = "1.4"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
+# The verbose level set by option --silent.
 SILENT_VERBOSE = -1
+# Relative map of the pixel neighbourhood.
+PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
+                       ( 0,  0, -1),
+                       ( 0, +1,  0),
+                       ( 0, -1,  0),
+                       (+1,  0,  0),
+                       (-1,  0,  0))
 
 
 def main(argv=None):
@@ -77,7 +85,11 @@ def _main(argv=None):
     options = parse_args(argv)
 
     # Load the input data (a FITS datacube).
-    idata = load_idata(options.ifits)
+    try:
+        idata = load_idata(options.ifits)
+    except IOError as e:
+        msg = "Cannot load file '{0}'. {e}".format(options.ifits, e=e)
+        raise IOError(msg)
 
     # Set options that were not set by the args parser.
     options = set_defaults(options, idata)
@@ -251,8 +263,8 @@ def set_defaults(options, idata):
     # dTleaf/Tcutoff -- 3*sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
         if options.verbose > 0:
-            print("dTleaf and/or Tcutoff not set.  Estimating from the input "
-                  "data (IFITS).")
+            print("Options dTleaf and/or Tcutoff not set.  "
+                  "Estimating from the input data.")
 
         # Compute data mean and std.
         valid = idata.view(np.ma.MaskedArray)
@@ -529,8 +541,9 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
     ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
                               .format(ifits=os.path.basename(options.ifits)))
     ohdu.header["COMMENT"] = ("Quickclump was run with following parameters:")
-    ohdu.header["COMMENT"] = ("  dTleaf={dTleaf}".format(dTleaf=options.dTleaf))
-    ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff}"
+    ohdu.header["COMMENT"] = ("  dTleaf={dTleaf:.12g}"
+                              .format(dTleaf=options.dTleaf))
+    ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff:.12g}"
                               .format(Tcutoff=options.Tcutoff))
     ohdu.header["COMMENT"] = ("  Npxmin={Npxmin}".format(Npxmin=options.Npxmin))
     ohdu.header["COMMENT"] = ("Total clumps found: {fcc}"
@@ -833,15 +846,6 @@ class Pixel(PixelLike):
 
     """Pixel within the data cube."""
 
-    # Relative map for neighbouring pixels.
-    # (Sorry for breaking PEP 8 here, it just looks better this way.) :)
-    neigh_map = np.array([( 0,  0, +1),
-                          ( 0,  0, -1),
-                          ( 0, +1,  0),
-                          ( 0, -1,  0),
-                          (+1,  0,  0),
-                          (-1,  0,  0)], dtype=int)
-
     def __init__(self, ijk, idata, clmask, clumps):
         super(Pixel, self).__init__()
         # (i,j,k) coordinates
@@ -863,7 +867,7 @@ class Pixel(PixelLike):
         The list of neighbours is sorted: clumps with lower ncl first.
         """
         neighbours = []
-        for shift in self.neigh_map:
+        for shift in PIXEL_NEIGHBOURHOOD:
             ncl = self.clmask[tuple(self.ijk + shift)]
             if ncl > -1:
                 neighbour = self.clumps[ncl].get_merger()
