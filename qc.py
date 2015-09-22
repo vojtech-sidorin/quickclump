@@ -85,7 +85,11 @@ def _main(argv=None):
     options = parse_args(argv)
 
     # Load the input data (a FITS datacube).
-    idata = load_idata(options.ifits)
+    try:
+        idata = load_idata(options.ifits)
+    except IOError as e:
+        msg = "Cannot load file '{0}'. {e}".format(options.ifits, e=e)
+        raise IOError(msg)
 
     # Set options that were not set by the args parser.
     options = set_defaults(options, idata)
@@ -259,8 +263,8 @@ def set_defaults(options, idata):
     # dTleaf/Tcutoff -- 3*sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
         if options.verbose > 0:
-            print("dTleaf and/or Tcutoff not set.  Estimating from the input "
-                  "data (IFITS).")
+            print("Options dTleaf and/or Tcutoff not set.  "
+                  "Estimating from the input data.")
 
         # Compute data mean and std.
         valid = idata.view(np.ma.MaskedArray)
