@@ -38,21 +38,6 @@ except ImportError:
 import qc
 
 
-class TestModuleConstants(unittest.TestCase):
-    """Test module-level constants."""
-
-    CONSTANTS_NAMES = ["DEFAULT_NPXMIN",
-                       "DEFAULT_VERBOSE",
-                       "SILENT_VERBOSE",
-                       "PIXEL_NEIGHBOURHOOD"]
-
-    def test_if_constants_set(self):
-        for constant_name in self.CONSTANTS_NAMES:
-            msg = ("Missing expected constant '{0}' in module 'qc'."
-                   .format(constant_name))
-            self.assertTrue(hasattr(qc,constant_name), msg)
-
-
 class TestParseArgs(unittest.TestCase):
     """Test function parse_args."""
 
