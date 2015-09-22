@@ -27,7 +27,7 @@ To run in interactive mode, type
 
 ## Description
 
-Quickclump is a fast and precise clump-finding code.
+Quickclump is a fast and accurate clump-finding code.
 It is an improved implementation of
 [DENDROFIND](http://galaxy.asu.cas.cz/~richard/dendrofind/)
 ([Wunsch et al., 2012](http://adsabs.harvard.edu/abs/2012A%26A...539A.116W))
