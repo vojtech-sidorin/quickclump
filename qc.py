@@ -180,7 +180,7 @@ def parse_args(argv=None):
                         default=DEFAULT_VERBOSE, help="Increase verbosity.")
     parser.add_argument("--silent", dest="verbose", action="store_const",
                         const=SILENT_VERBOSE, help="Suppress output to "
-                        "stdout, i.e. set verbosity to a minimum.")
+                        "stdout; i.e. set verbosity to a minimum.")
     args = parser.parse_args(argv)
     return args
 
