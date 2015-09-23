@@ -148,14 +148,17 @@ def parse_args(argv=None):
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--dTleaf", type=float, help="Minimal depth of a "
-                        "valley separating adjacent clumps.  Must be > 0.  "
+                        "valley separating adjacent clumps.  Clumps separated "
+                        "by a valley that is shallower will be merged "
+                        "together.  "
+                        "Must be > 0.  "
                         "(default: 3*sig_noise)")
     parser.add_argument("--Tcutoff", type=float, help="Minimal data value to "
                         "consider.  Pixels with lower values won't be "
                         "processed.  Must be > 0.  (default: 3*sig_noise)")
     parser.add_argument("--Npxmin", type=int, default=DEFAULT_NPXMIN,
                         help="Minimal size of a clump in pixels.  "
-                        "Smaller clumps will be either merged to adjacent "
+                        "Smaller clumps will be either merged to an adjacent "
                         "clumps or deleted.  "
                         "(default: %(default)s)")
     parser.add_argument("--ofits", help="FITS file where the found clumps "
@@ -177,7 +180,7 @@ def parse_args(argv=None):
                         default=DEFAULT_VERBOSE, help="Increase verbosity.")
     parser.add_argument("--silent", dest="verbose", action="store_const",
                         const=SILENT_VERBOSE, help="Suppress output to "
-                        "stdout.  (Set verbosity to a minimum.)")
+                        "stdout; i.e. set verbosity to a minimum.")
     args = parser.parse_args(argv)
     return args
 

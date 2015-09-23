@@ -38,6 +38,9 @@ except ImportError:
 import qc
 
 
+SAMPLE_FILES_DIR = "test_samples"
+
+
 class TestParseArgs(unittest.TestCase):
     """Test function parse_args."""
 
@@ -87,13 +90,13 @@ class TestParseArgs(unittest.TestCase):
 class TestLoadIdata(unittest.TestCase):
     """Test function load_idata."""
 
-    NON_3D_FITS = ["./fixtures/1d.fits",
-                   "./fixtures/2d.fits",
-                   "./fixtures/4d.fits"]
+    NON_3D_FITS = [os.path.join(SAMPLE_FILES_DIR, "1d.fits"),
+                   os.path.join(SAMPLE_FILES_DIR, "2d.fits"),
+                   os.path.join(SAMPLE_FILES_DIR, "4d.fits")]
 
-    THREE_DIM_FITS = ["./fixtures/3d.fits",
-                      "./fixtures/rand_normal.fits",
-                      "./fixtures/rand_uniform.fits"]
+    THREE_DIM_FITS = [os.path.join(SAMPLE_FILES_DIR, "3d.fits"),
+                      os.path.join(SAMPLE_FILES_DIR, "rand_normal.fits"),
+                      os.path.join(SAMPLE_FILES_DIR, "rand_uniform.fits")]
 
     def test_non_3d_fits(self):
         for filename in self.NON_3D_FITS:
@@ -215,7 +218,6 @@ class TestMain(unittest.TestCase):
     with expected results.
     """
 
-    FIXTURES_DIR = "./fixtures"
     SAMPLE_FILES_PREFIXES = ["rand_normal",
                              "rand_uniform"]
 
@@ -231,7 +233,7 @@ class TestMain(unittest.TestCase):
         for f in self.SAMPLE_FILES_PREFIXES:
 
             # Run main() on the sample file.
-            ifits = os.path.join(self.FIXTURES_DIR, f + ".fits")
+            ifits = os.path.join(SAMPLE_FILES_DIR, f + ".fits")
             test_ofits = os.path.join(self.tmpd, f + ".clumps.fits")
             test_otext = os.path.join(self.tmpd, f + ".clumps.txt")
             qc.main("--ofits {ofits} --otext {otext} {ifits} --silent"
@@ -239,7 +241,7 @@ class TestMain(unittest.TestCase):
                     .split())
 
             # Compare FITS results.
-            expected_ofits = os.path.join(self.FIXTURES_DIR, f + ".clumps.fits")
+            expected_ofits = os.path.join(SAMPLE_FILES_DIR, f + ".clumps.fits")
             with fits.open(expected_ofits) as g:
                 expected_odata = g[0].data
                 expected_header = g[0].header
@@ -260,7 +262,7 @@ class TestMain(unittest.TestCase):
             self.assertSequenceEqual(expected_header, test_header)
 
             # Compare TXT results.
-            expected_otext = os.path.join(self.FIXTURES_DIR, f + ".clumps.txt")
+            expected_otext = os.path.join(SAMPLE_FILES_DIR, f + ".clumps.txt")
             with open(expected_otext, "rb") as g:
                 expected_otext_contents = g.read()
             with open(test_otext, "rb") as h:
