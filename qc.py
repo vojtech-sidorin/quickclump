@@ -60,9 +60,9 @@ __version__ = "1.3-2"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
-# The verbose level set by option --silent.
+# What verbose level will option --silent set.
 SILENT_VERBOSE = -1
-# Relative map of the pixel neighbourhood.
+# Relative map of a pixel's neighbourhood.
 PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
                        ( 0,  0, -1),
                        ( 0, +1,  0),
@@ -80,8 +80,7 @@ def main(argv=None):
 
 
 def _main(argv=None):
-    # Parse arguments: if argv is None, arguments from sys.argv will be
-    # used automatically.
+    # NOTE: If argv is None, the arguments from sys.argv will be used instead.
     options = parse_args(argv)
 
     # Load the input data (a FITS datacube).
@@ -91,13 +90,11 @@ def _main(argv=None):
         msg = "Cannot load file '{0}'. {e}".format(options.ifits, e=e)
         raise IOError(msg)
 
-    # Set options that were not set by the args parser.
     options = set_defaults(options, idata)
-
     check_options(options)
 
     # Initialise the clumps mask: pixels labeled with the number of the
-    # corresponding clump.
+    # clump to which they belong.
     clmask = np.empty(idata.shape, dtype="int32")
     clmask[:] = -1
     # NOTE: dtype will be reviewed later, before saving the output into a
@@ -108,7 +105,7 @@ def _main(argv=None):
     # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
     # the pixel.
 
-    # init list of clumps
+    # The discovered clumps will be collected in this list.
     clumps = []
 
     if options.verbose > 0:
@@ -125,9 +122,9 @@ def _main(argv=None):
     renumber_clmask(clmask, clumps)
     if options.verbose > SILENT_VERBOSE:
         print("{N} clumps found.".format(N=final_clumps_count))
-    # NOTE: The clumps have now set their final labels/numbers, which are
-    # stored in attribute final_ncl.
-    # NOTE: Too small clumps, those with Npx < Npxmin, have set their
+    # NOTE: The clumps have now been set their final labels/numbers, which
+    # are stored in attribute final_ncl.
+    # NOTE: Too small clumps, those with Npx < Npxmin, have been set their
     # final_ncl to 0.
 
     if options.ofits.strip().upper() != "NONE":
@@ -142,7 +139,7 @@ def _main(argv=None):
 
 
 def parse_args(argv=None):
-    """Parse arguments with argparse."""
+    """Parse arguments."""
     parser = argparse.ArgumentParser(
             description="Identifies clumps within a 3D FITS datacube.")
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
@@ -283,7 +280,7 @@ def set_defaults(options, idata):
         std_noise = noise.std()
         del noise  # No longer needed: delete the reference
 
-        # Check if estimation of std_noise from input data succeeded.
+        # Check if estimation of std_noise succeeded.
         if (not np.isfinite(std_noise)) or (std_noise <= 0.):
             raise OutOfBoundsError(
                 "Estimation of std_noise from input data failed.  "
@@ -344,11 +341,11 @@ def find_all_clumps(idata, clmask, clumps, options):
     assert clmask.ndim == 3
     assert clmask.shape == idata.shape
 
-    # Sort keys of idata array (1-D flattened keys).
+    # Sort flattened keys of idata array.
     skeys1 = idata.argsort(axis=None)[::-1]
 
     # Find clumps -- loop over sorted keys of pixels starting at maximum.
-    ncl = -1  # current clump label/index
+    ncl = -1  # Initialise clump index.
     assert options.Tcutoff > idata[0, 0, 0]
     for key1 in skeys1:
 
