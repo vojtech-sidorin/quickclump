@@ -349,7 +349,7 @@ def find_all_clumps(idata, clmask, clumps, options):
 
     # Find clumps -- loop over sorted keys of pixels starting at maximum.
     ncl = -1  # current clump label/index
-    assert options.Tcutoff > 0.
+    assert options.Tcutoff > idata[0, 0, 0]
     for key1 in skeys1:
 
         # Derive key3 (3-D key)
