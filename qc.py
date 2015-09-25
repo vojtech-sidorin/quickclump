@@ -816,7 +816,7 @@ class Clump(PixelLike):
                 "  Nconnected: {Nconnected}\n"
                 "".format(final_ncl=self.final_ncl,
                           Npx=self.Npx,
-                          Tmax=self.dpeak,
+                          Tmax=float(self.dpeak),
                           Ntouching=len(touching),
                           Nconnected=len(connected))]
         # NOTE: PyFITS reverses the order of coordinates, therefore we
