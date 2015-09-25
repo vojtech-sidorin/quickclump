@@ -827,15 +827,15 @@ class Clump(PixelLike):
         # output ijk directly.
         str_.append("  pixels:\n")
         str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval:.12g}\n"
-                     "".format(ijk=px[0], dval=px[1])
+                     "".format(ijk=px[0], dval=float(px[1]))
                      for px in self.pixels])
         str_.append("  touching:\n")
         str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
-                     "".format(final_ncl=t[0].final_ncl, dval=t[1])
+                     "".format(final_ncl=t[0].final_ncl, dval=float(t[1]))
                      for t in touching])
         str_.append("  connected:\n")
         str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
-                     "".format(final_ncl=c[0].final_ncl, dval=c[1])
+                     "".format(final_ncl=c[0].final_ncl, dval=float(c[1]))
                      for c in connected])
         str_ = "".join(str_)
 
