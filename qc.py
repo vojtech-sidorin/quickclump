@@ -63,6 +63,7 @@ DEFAULT_VERBOSE = 0
 # What verbose level will option --silent set.
 SILENT_VERBOSE = -1
 # Relative map of a pixel's neighbourhood.
+# pylint: disable=bad-whitespace
 PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
                        ( 0,  0, -1),
                        ( 0, +1,  0),
@@ -141,7 +142,7 @@ def _main(argv=None):
 def parse_args(argv=None):
     """Parse arguments."""
     parser = argparse.ArgumentParser(
-            description="Identifies clumps within a 3D FITS datacube.")
+        description="Identifies clumps within a 3D FITS datacube.")
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--dTleaf", type=float, help="Minimal depth of a "
@@ -787,7 +788,7 @@ class Clump(PixelLike):
         self.Npx += 1
         self.pixels.append([px.ijk, px.dval])
         self.xyz = ((px.dval*px.xyz + self.wxyz*self.xyz)/
-                        (px.dval + self.wxyz))
+                    (px.dval + self.wxyz))
         self.wxyz += px.dval
         self.sumd += px.dval
 
