@@ -378,7 +378,7 @@ def find_all_clumps(idata, clmask, clumps, options):
         elif len(neighbours) == 1:
             # One neighbour --> Add pixel to it
             clmask[key3] = neighbours[0].ncl
-            px.addto(neighbours[0])
+            neighbours[0].add_px(px)
         else:
             # More neighbours --> Merge/connect them
             # NOTE: There are two things to do now:
@@ -410,7 +410,7 @@ def find_all_clumps(idata, clmask, clumps, options):
 
             # Add pixel to merger
             clmask[key3] = merger.ncl
-            px.addto(merger)
+            merger.add_px(px)
 
             # (2) Update the properties of the neighbouring clumps.
             # (2a) Merge too short clumps.
@@ -782,6 +782,15 @@ class Clump(PixelLike):
 
         return connected
 
+    def add_px(self, px):
+        """Add pixel px to the clump."""
+        self.Npx += 1
+        self.pixels.append([px.ijk, px.dval])
+        self.xyz = ((px.dval*px.xyz + self.wxyz*self.xyz)/
+                        (px.dval + self.wxyz))
+        self.wxyz += px.dval
+        self.sumd += px.dval
+
     def __str__(self):
 
         """Return textual representation of the clump.
@@ -893,15 +902,6 @@ class Pixel(PixelLike):
                 grandparents.append(grandparent)
         grandparents.sort(key=lambda clump: clump.ncl)
         return grandparents
-
-    def addto(self, clump):
-        """Add pixel to clump."""
-        clump.Npx += 1
-        clump.pixels.append([self.ijk, self.dval])
-        clump.xyz = ((self.dval*self.xyz + clump.wxyz*clump.xyz)/
-                     (self.dval + clump.wxyz))
-        clump.wxyz += self.dval
-        clump.sumd += self.dval
 
 
 if __name__ == "__main__":
