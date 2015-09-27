@@ -473,30 +473,17 @@ def renumber_clumps(clumps, Npxmin):
     """Renumber clumps taking into account mergers and Npxmin limit.
 
     Set clumps' final_ncl so that:
-
      - The numbering starts from 1.
-     - Merged clumps are renumbered according to the final_ncl of the clump
-       to which they merge.  This is consistent, since clumps are expected to
-       merge only to clumps with a lower ncl, which are processed/renumbered
-       prior to the merging clump.
-     - Solitary clumps with too little pixels (< Npxmin) are "deleted",
-       i.e. final_ncl is set to 0.
+     - Clumps that are merged or have too little pixels (<Npxmin) are
+       excluded.
 
     Return the final count of clumps: last new_ncl.
     """
     new_ncl = 0
     for clump in clumps:
-        if clump.merged:
-            # Clump merged --> use final_ncl of get_merger() clump
-            exp_clump = clump.get_merger()
-            assert exp_clump.ncl < clump.ncl, \
-                    "Clumps should merge only to clumps with lower ncl."
-            clump.final_ncl = exp_clump.final_ncl
-        elif clump.Npx < Npxmin:
-            # Too small clump --> renumber to 0 (delete)
-            clump.final_ncl = 0
+        if clump.merged or clump.Npx < Npxmin:
+            continue
         else:
-            # Assign new clump number
             new_ncl += 1
             clump.final_ncl = new_ncl
     return new_ncl
@@ -506,7 +493,7 @@ def renumber_clmask(clmask, clumps):
     """Renumber clmask according to clumps' final_ncl."""
     clmask[:] = 0
     for clump in clumps:
-        if clump.merged or clump.final_ncl < 1:
+        if clump.merged or clump.final_ncl is None:
             continue
         else:
             for ijk, _ in clump.pixels:
@@ -589,9 +576,9 @@ def write_otext(otext, clumps, options):
                 .format(options=options))
         # Output the clumps.
         for clump in clumps:
-            # Output only clumps which were not deleted (final_ncl > 0) or
-            # merged.
-            if (not clump.merged) and (clump.final_ncl > 0):
+            # Output only clumps that were not rejected (final_ncl is not None)
+            # or merged.
+            if (not clump.merged) and (clump.final_ncl is not None):
                 f.write(str(clump))
                 f.write("\n")
 
