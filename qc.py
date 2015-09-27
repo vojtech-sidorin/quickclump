@@ -56,7 +56,7 @@ except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Have you installed 'astropy' or 'pyfits'?")
 
-__version__ = "1.3-2"
+__version__ = "1.3-3"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
