@@ -429,6 +429,10 @@ def find_all_clumps(idata, clmask, clumps, options):
                     other_neighbour.update_touching(neighbour, px.dval)
 
             # (2c) Connect grandparents.
+            # This is done so that when one side of a U-shaped clump group
+            # should be rejected, e.g. because of having too little pixels,
+            # that side should rather be merged to the other side than be
+            # deleted.
             # NOTE: Grandparents are sorted.
             gps = px.get_grandparents(neighbours)
             for i in range(1, len(gps)):
