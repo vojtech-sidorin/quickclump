@@ -54,15 +54,16 @@ except ImportError:
         import pyfits as fits
     except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
-                 "Do you have installed 'astropy' or 'pyfits'?")
+                 "Have you installed 'astropy' or 'pyfits'?")
 
 __version__ = "1.3-2"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
-# The verbose level set by option --silent.
+# What verbose level will option --silent set.
 SILENT_VERBOSE = -1
-# Relative map of the pixel neighbourhood.
+# Relative map of a pixel's neighbourhood.
+# pylint: disable=bad-whitespace
 PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
                        ( 0,  0, -1),
                        ( 0, +1,  0),
@@ -80,8 +81,7 @@ def main(argv=None):
 
 
 def _main(argv=None):
-    # Parse arguments: if argv is None, arguments from sys.argv will be
-    # used automatically.
+    # NOTE: If argv is None, the arguments from sys.argv will be used instead.
     options = parse_args(argv)
 
     # Load the input data (a FITS datacube).
@@ -91,13 +91,11 @@ def _main(argv=None):
         msg = "Cannot load file '{0}'. {e}".format(options.ifits, e=e)
         raise IOError(msg)
 
-    # Set options that were not set by the args parser.
     options = set_defaults(options, idata)
-
     check_options(options)
 
     # Initialise the clumps mask: pixels labeled with the number of the
-    # corresponding clump.
+    # clump to which they belong.
     clmask = np.empty(idata.shape, dtype="int32")
     clmask[:] = -1
     # NOTE: dtype will be reviewed later, before saving the output into a
@@ -108,7 +106,7 @@ def _main(argv=None):
     # atribute final_ncl, will start from 1 with 0 meaning no clumps owning
     # the pixel.
 
-    # init list of clumps
+    # The discovered clumps will be collected in this list.
     clumps = []
 
     if options.verbose > 0:
@@ -125,9 +123,9 @@ def _main(argv=None):
     renumber_clmask(clmask, clumps)
     if options.verbose > SILENT_VERBOSE:
         print("{N} clumps found.".format(N=final_clumps_count))
-    # NOTE: The clumps have now set their final labels/numbers, which are
-    # stored in attribute final_ncl.
-    # NOTE: Too small clumps, those with Npx < Npxmin, have set their
+    # NOTE: The clumps have now been set their final labels/numbers, which
+    # are stored in attribute final_ncl.
+    # NOTE: Too small clumps, those with Npx < Npxmin, have been set their
     # final_ncl to 0.
 
     if options.ofits.strip().upper() != "NONE":
@@ -142,9 +140,9 @@ def _main(argv=None):
 
 
 def parse_args(argv=None):
-    """Parse arguments with argparse."""
+    """Parse arguments."""
     parser = argparse.ArgumentParser(
-            description="Identifies clumps within a 3D FITS datacube.")
+        description="Identifies clumps within a 3D FITS datacube.")
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--dTleaf", type=float, help="Minimal depth of a "
@@ -283,7 +281,7 @@ def set_defaults(options, idata):
         std_noise = noise.std()
         del noise  # No longer needed: delete the reference
 
-        # Check if estimation of std_noise from input data succeeded.
+        # Check if estimation of std_noise succeeded.
         if (not np.isfinite(std_noise)) or (std_noise <= 0.):
             raise OutOfBoundsError(
                 "Estimation of std_noise from input data failed.  "
@@ -344,12 +342,12 @@ def find_all_clumps(idata, clmask, clumps, options):
     assert clmask.ndim == 3
     assert clmask.shape == idata.shape
 
-    # Sort keys of idata array (1-D flattened keys).
+    # Sort flattened keys of idata array.
     skeys1 = idata.argsort(axis=None)[::-1]
 
     # Find clumps -- loop over sorted keys of pixels starting at maximum.
-    ncl = -1  # current clump label/index
-    assert options.Tcutoff > 0.
+    ncl = -1  # Initialise clump index.
+    assert options.Tcutoff > idata[0, 0, 0]
     for key1 in skeys1:
 
         # Derive key3 (3-D key)
@@ -381,7 +379,7 @@ def find_all_clumps(idata, clmask, clumps, options):
         elif len(neighbours) == 1:
             # One neighbour --> Add pixel to it
             clmask[key3] = neighbours[0].ncl
-            px.addto(neighbours[0])
+            neighbours[0].add_px(px)
         else:
             # More neighbours --> Merge/connect them
             # NOTE: There are two things to do now:
@@ -413,7 +411,7 @@ def find_all_clumps(idata, clmask, clumps, options):
 
             # Add pixel to merger
             clmask[key3] = merger.ncl
-            px.addto(merger)
+            merger.add_px(px)
 
             # (2) Update the properties of the neighbouring clumps.
             # (2a) Merge too short clumps.
@@ -502,14 +500,13 @@ def renumber_clumps(clumps, Npxmin):
 
 def renumber_clmask(clmask, clumps):
     """Renumber clmask according to clumps' final_ncl."""
-    if not clumps:
-        clmask[:] = 0
-    else:
-        for ijk, ncl in np.ndenumerate(clmask):
-            if clmask[ijk] < 0:
-                clmask[ijk] = 0
-            else:
-                clmask[ijk] = clumps[ncl].final_ncl
+    clmask[:] = 0
+    for clump in clumps:
+        if clump.merges or clump.final_ncl < 1:
+            continue
+        else:
+            for ijk, _ in clump.pixels:
+                clmask[tuple(ijk)] = clump.final_ncl
 
 
 def write_ofits(ofits, clmask, final_clumps_count, options):
@@ -641,6 +638,9 @@ class Clump(PixelLike):
         # Other clumps which touch this one.
         # {clump_reference: dval_at_which_they_touch}
         self.touching = {}
+        # Other clumps connected with this one.
+        # {clump: dval at which connect}
+        self.connected = {}
         # (x,y,z) coordinates of the clump:  The weighted average with the
         # weight equal to the clump's pixels data values.  Note the xyz changes
         # as new pixels are being added to the clump.
@@ -740,6 +740,8 @@ class Clump(PixelLike):
         make up a graph data structure.  We now want to find all the clumps
         (nodes) connected to clump self -- i.e. to discover the whole graph.
 
+        This method saves the last returned value in self.connected.
+
         Return connected -- dict of connected clumps in the form of
         {clump: connects_at_dval, ...}, where connects_at_dval is the data
         value at which the clump connects.
@@ -761,29 +763,47 @@ class Clump(PixelLike):
             # LIFO queue --> depth-first traversal
             next_in_queue = queue.pop()
             focused_clump = next_in_queue[0]
-            focused_dval = next_in_queue[1]
+            focused_valley = next_in_queue[1]
             assert not focused_clump.merges, \
                 "Only expanded clumps are expected in the queue."
-            for child_clump, child_dval in focused_clump.touching.items():
-                # Expand the clump.
-                exp_child_clump = child_clump.get_merger()
-                # Get the minimal data value along the path.
-                min_dval = min(focused_dval, child_dval)
-                if exp_child_clump not in connected:
-                    # Newly discovered clump
-                    queue.append([exp_child_clump, min_dval])
-                    connected.update({exp_child_clump: min_dval})
-                else:
-                    # Rediscovered clump; update if found a better/"higher"
-                    # path (with greater minimal dval along it).
-                    if min_dval > connected[exp_child_clump]:
-                        queue.append([exp_child_clump, min_dval])
-                        connected[exp_child_clump] = min_dval
+            if focused_clump.connected:
+                # Reuse what has been discovered for the focused clump.
+                for child_clump, child_valley in focused_clump.connected.items():
+                    min_valley = min(focused_valley, child_valley)
+                    if child_clump in connected:
+                        min_valley = max(min_valley, connected[child_clump])
+                    connected.update({child_clump: min_valley})
+            else:
+                for child_clump, child_valley in focused_clump.touching.items():
+                    # Expand the clump.
+                    exp_child_clump = child_clump.get_merger()
+                    # Get the minimal data value along the path.
+                    min_valley= min(focused_valley, child_valley)
+                    if exp_child_clump in connected:
+                        # Rediscovered clump; update if found a better/"higher"
+                        # path (with greater minimal dval along it).
+                        if min_valley > connected[exp_child_clump]:
+                            queue.append([exp_child_clump, min_valley])
+                            connected[exp_child_clump] = min_valley
+                    else:
+                        # Newly discovered clump
+                        queue.append([exp_child_clump, min_valley])
+                        connected.update({exp_child_clump: min_valley})
 
         # Remove self.get_merger() from connected.
         del connected[self.get_merger()]
 
+        self.connected = connected
         return connected
+
+    def add_px(self, px):
+        """Add pixel px to the clump."""
+        self.Npx += 1
+        self.pixels.append([px.ijk, px.dval])
+        self.xyz = ((px.dval*px.xyz + self.wxyz*self.xyz)/
+                    (px.dval + self.wxyz))
+        self.wxyz += px.dval
+        self.sumd += px.dval
 
     def __str__(self):
 
@@ -819,7 +839,7 @@ class Clump(PixelLike):
                 "  Nconnected: {Nconnected}\n"
                 "".format(final_ncl=self.final_ncl,
                           Npx=self.Npx,
-                          Tmax=self.dpeak,
+                          Tmax=float(self.dpeak),
                           Ntouching=len(touching),
                           Nconnected=len(connected))]
         # NOTE: PyFITS reverses the order of coordinates, therefore we
@@ -830,15 +850,15 @@ class Clump(PixelLike):
         # output ijk directly.
         str_.append("  pixels:\n")
         str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval:.12g}\n"
-                     "".format(ijk=px[0], dval=px[1])
+                     "".format(ijk=px[0], dval=float(px[1]))
                      for px in self.pixels])
         str_.append("  touching:\n")
         str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
-                     "".format(final_ncl=t[0].final_ncl, dval=t[1])
+                     "".format(final_ncl=t[0].final_ncl, dval=float(t[1]))
                      for t in touching])
         str_.append("  connected:\n")
         str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
-                     "".format(final_ncl=c[0].final_ncl, dval=c[1])
+                     "".format(final_ncl=c[0].final_ncl, dval=float(c[1]))
                      for c in connected])
         str_ = "".join(str_)
 
@@ -896,15 +916,6 @@ class Pixel(PixelLike):
                 grandparents.append(grandparent)
         grandparents.sort(key=lambda clump: clump.ncl)
         return grandparents
-
-    def addto(self, clump):
-        """Add pixel to clump."""
-        clump.Npx += 1
-        clump.pixels.append([self.ijk, self.dval])
-        clump.xyz = ((self.dval*self.xyz + clump.wxyz*clump.xyz)/
-                     (self.dval + clump.wxyz))
-        clump.wxyz += self.dval
-        clump.sumd += self.dval
 
 
 if __name__ == "__main__":
