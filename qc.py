@@ -500,14 +500,13 @@ def renumber_clumps(clumps, Npxmin):
 
 def renumber_clmask(clmask, clumps):
     """Renumber clmask according to clumps' final_ncl."""
-    if not clumps:
-        clmask[:] = 0
-    else:
-        for ijk, ncl in np.ndenumerate(clmask):
-            if clmask[ijk] < 0:
-                clmask[ijk] = 0
-            else:
-                clmask[ijk] = clumps[ncl].final_ncl
+    clmask[:] = 0
+    for clump in clumps:
+        if clump.merges or clump.final_ncl < 1:
+            continue
+        else:
+            for ijk, _ in clump.pixels:
+                clmask[tuple(ijk)] = clump.final_ncl
 
 
 def write_ofits(ofits, clmask, final_clumps_count, options):
