@@ -311,9 +311,9 @@ def check_options(options):
     """Check values of dTleaf and Tcutoff."""
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
-    if not (options.dTleaf > 0.):
+    if not options.dTleaf > 0.:
         raise OutOfBoundsError("'dTleaf' must be > 0.")
-    if not (options.Tcutoff > 0.):
+    if not options.Tcutoff > 0.:
         raise OutOfBoundsError("'Tcutoff' must be > 0.")
 
 
@@ -603,6 +603,8 @@ class OutOfBoundsError(Exception):
 class PixelLike(object):
 
     """Pixel-like objects living in idata."""
+
+    xyz = None
 
     def dist2(self, other):
         """Return square of the distance to other object."""
