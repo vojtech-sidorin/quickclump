@@ -638,6 +638,9 @@ class Clump(PixelLike):
         # Other clumps which touch this one.
         # {clump_reference: dval_at_which_they_touch}
         self.touching = {}
+        # Other clumps connected with this one.
+        # {clump: dval at which connect}
+        self.connected = {}
         # (x,y,z) coordinates of the clump:  The weighted average with the
         # weight equal to the clump's pixels data values.  Note the xyz changes
         # as new pixels are being added to the clump.
@@ -737,6 +740,8 @@ class Clump(PixelLike):
         make up a graph data structure.  We now want to find all the clumps
         (nodes) connected to clump self -- i.e. to discover the whole graph.
 
+        This method saves the last returned value in self.connected.
+
         Return connected -- dict of connected clumps in the form of
         {clump: connects_at_dval, ...}, where connects_at_dval is the data
         value at which the clump connects.
@@ -758,28 +763,37 @@ class Clump(PixelLike):
             # LIFO queue --> depth-first traversal
             next_in_queue = queue.pop()
             focused_clump = next_in_queue[0]
-            focused_dval = next_in_queue[1]
+            focused_valley = next_in_queue[1]
             assert not focused_clump.merges, \
                 "Only expanded clumps are expected in the queue."
-            for child_clump, child_dval in focused_clump.touching.items():
-                # Expand the clump.
-                exp_child_clump = child_clump.get_merger()
-                # Get the minimal data value along the path.
-                min_dval = min(focused_dval, child_dval)
-                if exp_child_clump not in connected:
-                    # Newly discovered clump
-                    queue.append([exp_child_clump, min_dval])
-                    connected.update({exp_child_clump: min_dval})
-                else:
-                    # Rediscovered clump; update if found a better/"higher"
-                    # path (with greater minimal dval along it).
-                    if min_dval > connected[exp_child_clump]:
-                        queue.append([exp_child_clump, min_dval])
-                        connected[exp_child_clump] = min_dval
+            if focused_clump.connected:
+                # Reuse what has been discovered for the focused clump.
+                for child_clump, child_valley in focused_clump.connected.items():
+                    min_valley = min(focused_valley, child_valley)
+                    if child_clump in connected:
+                        min_valley = max(min_valley, connected[child_clump])
+                    connected.update({child_clump: min_valley})
+            else:
+                for child_clump, child_valley in focused_clump.touching.items():
+                    # Expand the clump.
+                    exp_child_clump = child_clump.get_merger()
+                    # Get the minimal data value along the path.
+                    min_valley= min(focused_valley, child_valley)
+                    if exp_child_clump in connected:
+                        # Rediscovered clump; update if found a better/"higher"
+                        # path (with greater minimal dval along it).
+                        if min_valley > connected[exp_child_clump]:
+                            queue.append([exp_child_clump, min_valley])
+                            connected[exp_child_clump] = min_valley
+                    else:
+                        # Newly discovered clump
+                        queue.append([exp_child_clump, min_valley])
+                        connected.update({exp_child_clump: min_valley})
 
         # Remove self.get_merger() from connected.
         del connected[self.get_merger()]
 
+        self.connected = connected
         return connected
 
     def add_px(self, px):
