@@ -848,7 +848,7 @@ class Clump(PixelLike):
                           Tmax=float(self.dpeak),
                           Ntouching=len(touching),
                           Nconnected=len(connected))]
-        # NOTE: PyFITS reverses the order of coordinates, therefore we
+        # NOTE: FITS IO reverses the order of coordinates, therefore we
         # output 2-1-0.
         # NOTE: Coordinates in FITS start from 1 and because arrays clmask
         # and idata in this code add an one-pixel border around the original
@@ -874,6 +874,8 @@ class Clump(PixelLike):
 class Pixel(PixelLike):
 
     """Pixel within the data cube."""
+
+    def __init__(self
 
     def __init__(self, ijk, idata, clmask, clumps):
         super(Pixel, self).__init__()
