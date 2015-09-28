@@ -366,10 +366,10 @@ def find_all_clumps(idata, clmask, clumps, options):
             break
 
         # Initialize pixel
-        px = Pixel(key3, idata, clmask, clumps)
+        px = Pixel(key3, dval)
 
         # Find neighbours (clumps touching at this pixel)
-        neighbours = sorted(px.get_neighbours(),
+        neighbours = sorted(px.get_neighbours(clmask, clumps),
                             key=lambda clump: clump.dpeak, reverse=True)
 
         if not neighbours:
@@ -434,7 +434,7 @@ def find_all_clumps(idata, clmask, clumps, options):
             # should be rejected, e.g. because of having too little pixels,
             # that side should rather be merged to the other side than be
             # deleted.
-            root_parents = sorted(px.root_parents(neighbours),
+            root_parents = sorted(px.get_root_parents(neighbours),
                                   key=lambda clump: clump.dpeak, reverse=True)
             for i in range(1, len(root_parents)):
                 root_parent = root_parents[i]
@@ -462,10 +462,10 @@ def merge_small_clumps(clumps, Npxmin):
         elif clump.parent is clump:
             # Solitary/orphan clump --> skip
             continue
-        elif clump.Npx < Npxmin:
+        elif clump.npx < Npxmin:
             # Too small clump --> merge to its parent
             clump.merge_to_parent()
-        elif clump.parent.merger.Npx < Npxmin:
+        elif clump.parent.merger.npx < Npxmin:
             # Too small parent --> merge clump to it
             clump.merge_to_parent()
 
@@ -482,7 +482,7 @@ def renumber_clumps(clumps, Npxmin):
     """
     new_ncl = 0
     for clump in clumps:
-        if clump.merged or clump.Npx < Npxmin:
+        if clump.merged or clump.npx < Npxmin:
             continue
         else:
             new_ncl += 1
@@ -497,8 +497,8 @@ def renumber_clmask(clmask, clumps):
         if clump.merged or clump.final_ncl is None:
             continue
         else:
-            for ijk, _ in clump.pixels:
-                clmask[tuple(ijk)] = clump.final_ncl
+            for px in clump.pixels:
+                clmask[tuple(px.ijk)] = clump.final_ncl
 
 
 def write_ofits(ofits, clmask, final_clumps_count, options):
@@ -593,11 +593,8 @@ class OutOfBoundsError(Exception):
 
 
 class PixelLike(object):
-
-    """Pixel-like objects living in idata."""
-
+    """Base class for pixel-like objects."""
     xyz = None
-
     def dist2(self, other):
         """Return square of the distance to other object."""
         return ((self.xyz-other.xyz)**2).sum()
@@ -620,10 +617,8 @@ class Clump(PixelLike):
         self.ncl = ncl
         # Final clump label to be set during last renumbering.
         self.final_ncl = None
-        # Number of pixels (incl. pixels of clumps which merge to this clump).
-        self.Npx = 1
-        # List of pixels belonging to the clump: [[(x,y,z), dval], ...]
-        self.pixels = [[px.ijk, px.dval]]
+        # List of pixels belonging to the clump.
+        self._pixels = [px]
         # Parent to which the clump is connected (the nearest clump with a
         # higher dpeak touching this clump).
         self._parent = self
@@ -643,6 +638,14 @@ class Clump(PixelLike):
         self.wxyz = px.dval
         # The peak data value.
         self.dpeak = px.dval
+
+    @property
+    def pixels(self):
+        return self._pixels
+
+    @property
+    def npx(self):
+        return len(self._pixels)
 
     @property
     def parent(self):
@@ -682,27 +685,21 @@ class Clump(PixelLike):
         return self._merged
 
     def merge_to_parent(self):
-
         """Merge clump to its parent."""
+        self.parent.merge(self)
 
-        assert not self.merged, "Attempt to merge already merged clump."
-        merger = self.parent
-        assert merger is not self, "Attempt to merge clump to itself."
-
-        # Update pixels
-        merger.Npx += self.Npx
-        merger.pixels.extend(self.pixels)
-
-        # Update xyz
-        merger.xyz = ((self.wxyz*self.xyz + merger.wxyz*merger.xyz)/
-                      (self.wxyz + merger.wxyz))
-        merger.wxyz += self.wxyz
-
-        # Update touching
-        for clump, touching_at_dval in self.touching.items():
-            merger.update_touching(clump, touching_at_dval)
-
-        self._merged = True
+    def merge(self, other):
+        """Merge other clump to this clump."""
+        assert not other.merged, "Attempt to merge already merged clump."
+        assert not self.merged, "Attempt to merge to merged clump."
+        assert self is not other, "Attempt to merge clump to itself."
+        self.pixels.extend(other.pixels)
+        self.xyz = ((self.wxyz*self.xyz + other.wxyz*other.xyz)/
+                        (self.wxyz + other.wxyz))
+        self.wxyz += other.wxyz
+        for clump, touching_at_dval in other.touching.items():
+            self.update_touching(clump, touching_at_dval)
+        other._merged = True
 
     def update_touching(self, other, dval):
         """Add clump other to the dict of touching clumps.
@@ -805,9 +802,8 @@ class Clump(PixelLike):
         return connected
 
     def add_px(self, px):
-        """Add pixel px to the clump."""
-        self.Npx += 1
-        self.pixels.append([px.ijk, px.dval])
+        """Add pixel to the clump."""
+        self.pixels.append(px)
         self.xyz = ((px.dval*px.xyz + self.wxyz*self.xyz)/
                     (px.dval + self.wxyz))
         self.wxyz += px.dval
@@ -834,7 +830,8 @@ class Clump(PixelLike):
         connected.sort(key=lambda x: (-x[1], x[0].final_ncl))
 
         # Sort list of pixels (order by dval, k, j, i).
-        self.pixels.sort(key=lambda x: (-x[1], x[0][2], x[0][1], x[0][0]))
+        self.pixels.sort(key=lambda px:
+                            (-px.dval, px.ijk[2], px.ijk[1], px.ijk[0]))
 
         # Generate str_ to be returned.
         str_ = ["clump: {final_ncl}\n"
@@ -844,7 +841,7 @@ class Clump(PixelLike):
                 "  Ntouching: {Ntouching}\n"
                 "  Nconnected: {Nconnected}\n"
                 "".format(final_ncl=self.final_ncl,
-                          Npx=self.Npx,
+                          Npx=self.npx,
                           Tmax=float(self.dpeak),
                           Ntouching=len(touching),
                           Nconnected=len(connected))]
@@ -856,7 +853,7 @@ class Clump(PixelLike):
         # output ijk directly.
         str_.append("  pixels:\n")
         str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval:.12g}\n"
-                     "".format(ijk=px[0], dval=float(px[1]))
+                     "".format(ijk=px.ijk, dval=float(px.dval))
                      for px in self.pixels])
         str_.append("  touching:\n")
         str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
@@ -875,36 +872,30 @@ class Pixel(PixelLike):
 
     """Pixel within the data cube."""
 
-    def __init__(self, ijk, idata, clmask, clumps):
+    def __init__(self, ijk, dval):
         super(Pixel, self).__init__()
         # (i,j,k) coordinates
         self.ijk = np.array(ijk, dtype=int)
-        # (x,y,z) coordinates
-        self.xyz = np.array(ijk, dtype=float)
-        # Input data cube
-        self.idata = idata
-        # Pixel mask (to which clump the pixels belong)
-        self.clmask = clmask
-        # List of clumps
-        self.clumps = clumps
         # Data value
-        self.dval = idata[tuple(self.ijk)]
+        self.dval = dval
 
-    def get_neighbours(self):
+    @property
+    def xyz(self):
+        """XYZ coordinates of the pixel."""
+        return self.ijk.astype(float)
+
+    def get_neighbours(self, clmask, clumps):
         """Find neighbours touching at this pixel."""
         neighbours = set()
         for shift in PIXEL_NEIGHBOURHOOD:
-            ncl = self.clmask[tuple(self.ijk + shift)]
+            ncl = clmask[tuple(self.ijk + shift)]
             if ncl > -1:
-                neighbours.add(self.clumps[ncl].merger)
+                neighbours.add(clumps[ncl].merger)
         return neighbours
 
-    def root_parents(self, neighbours=None):
+    def get_root_parents(self, neighbours):
         """Find root parents among neighbours."""
-        if neighbours is None:
-            neighbours = self.get_neighbours()
-        root_parents = set([neighbour.root_parent for neighbour in neighbours])
-        return root_parents
+        return set([neighbour.root_parent for neighbour in neighbours])
 
 
 if __name__ == "__main__":
