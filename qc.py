@@ -821,7 +821,6 @@ class Clump(PixelLike):
         (df_dendrogram.py).
         """
 
-        # Compact touching clumps dict first.
         self.compact_touching()
 
         # Sort touching clumps (order by dval_at_which_they_touch, ncl).
