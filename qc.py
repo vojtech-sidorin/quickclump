@@ -369,7 +369,8 @@ def find_all_clumps(idata, clmask, clumps, options):
         px = Pixel(key3, idata, clmask, clumps)
 
         # Find neighbours (clumps touching at this pixel)
-        neighbours = px.get_neighbours()
+        neighbours = sorted(px.get_neighbours(),
+                            key=lambda clump: clump.dpeak, reverse=True)
 
         if not neighbours:
             # No neighbour --> Make a new clump
@@ -388,7 +389,7 @@ def find_all_clumps(idata, clmask, clumps, options):
             #  (2) Update the properties of the neighbouring clumps:
             #       (a) Merge too short clumps.
             #       (b) Update touching lists.
-            #       (c) Connect grandparents.
+            #       (c) Connect root parents.
 
             # (1) Add the pixel to a clump.
             # NOTE: Add the pixel to the nearest clump which will not be
@@ -428,22 +429,22 @@ def find_all_clumps(idata, clmask, clumps, options):
                     neighbour.update_touching(other_neighbour, px.dval)
                     other_neighbour.update_touching(neighbour, px.dval)
 
-            # (2c) Connect grandparents.
+            # (2c) Connect root parents.
             # This is done so that when one side of a U-shaped clump group
             # should be rejected, e.g. because of having too little pixels,
             # that side should rather be merged to the other side than be
             # deleted.
-            # NOTE: Grandparents are sorted.
-            gps = px.get_grandparents(neighbours)
-            for i in range(1, len(gps)):
-                gp = gps[i]
-                gp.parent = gps[0]
-                gp.dist2_min = gp.dist2(gp.parent)
-                for j in range(i):
-                    dist2 = gp.dist2(gps[j])
-                    if dist2 < gp.dist2_min:
-                        gp.parent = gps[j]
-                        gp.dist2_min = dist2
+            root_parents = sorted(px.root_parents(neighbours),
+                                  key=lambda clump: clump.dpeak, reverse=True)
+            for i in range(1, len(root_parents)):
+                root_parent = root_parents[i]
+                root_parent.parent = root_parents[0]
+                dist2_min = root_parent.dist2(root_parent.parent)
+                for j in range(1, i):
+                    dist2 = root_parent.dist2(root_parents[j])
+                    if dist2 < dist2_min:
+                        root_parent.parent = root_parents[j]
+                        dist2_min = dist2
 
 
 def merge_small_clumps(clumps, Npxmin):
@@ -642,8 +643,6 @@ class Clump(PixelLike):
         self.wxyz = px.dval
         # The peak data value.
         self.dpeak = px.dval
-        # The sum of the clump's data values (sum of all pixels' dval).
-        self.sumd = px.dval
 
     @property
     def parent(self):
@@ -662,6 +661,14 @@ class Clump(PixelLike):
         self._parent = self
 
     @property
+    def root_parent(self):
+        """Return self or parent's parent's... parent."""
+        if self._parent is self:
+            return self
+        else:
+            return self._parent.root_parent
+
+    @property
     def merger(self):
         """Return self or clump to which this clump merges."""
         if self._merged:
@@ -673,13 +680,6 @@ class Clump(PixelLike):
     def merged(self):
         """Return true if this clump was merged, false otherwise."""
         return self._merged
-
-    def get_grandparent(self):
-        """Return parent's parent's... parent or self."""
-        if self.parent is not self:
-            return self.parent.get_grandparent()
-        else:
-            return self
 
     def merge_to_parent(self):
 
@@ -697,7 +697,6 @@ class Clump(PixelLike):
         merger.xyz = ((self.wxyz*self.xyz + merger.wxyz*merger.xyz)/
                       (self.wxyz + merger.wxyz))
         merger.wxyz += self.wxyz
-        merger.sumd += self.sumd
 
         # Update touching
         for clump, touching_at_dval in self.touching.items():
@@ -812,7 +811,6 @@ class Clump(PixelLike):
         self.xyz = ((px.dval*px.xyz + self.wxyz*self.xyz)/
                     (px.dval + self.wxyz))
         self.wxyz += px.dval
-        self.sumd += px.dval
 
     def __str__(self):
 
@@ -894,37 +892,20 @@ class Pixel(PixelLike):
         self.dval = idata[tuple(self.ijk)]
 
     def get_neighbours(self):
-        """Find neighbours touching at this pixel.
-
-        The list of neighbours is sorted: clumps with lower ncl first.
-        """
-        neighbours = []
+        """Find neighbours touching at this pixel."""
+        neighbours = set()
         for shift in PIXEL_NEIGHBOURHOOD:
             ncl = self.clmask[tuple(self.ijk + shift)]
             if ncl > -1:
-                neighbour = self.clumps[ncl].merger
-                if neighbour not in neighbours:
-                    neighbours.append(neighbour)
-        neighbours.sort(key=lambda clump: clump.ncl)
+                neighbours.add(self.clumps[ncl].merger)
         return neighbours
 
-    def get_grandparents(self, neighbours=None):
-        """Find grandparents (parent's parent's... parent) among neighbours.
-
-        The grandparents are searched for in the list of neighbours.  If the
-        list is not provided, it will be taken from self.get_neighbours().
-
-        The list of grandparents is sorted: clumps with lower ncl first.
-        """
+    def root_parents(self, neighbours=None):
+        """Find root parents among neighbours."""
         if neighbours is None:
             neighbours = self.get_neighbours()
-        grandparents = []
-        for neighbour in neighbours:
-            grandparent = neighbour.get_grandparent()
-            if grandparent not in grandparents:
-                grandparents.append(grandparent)
-        grandparents.sort(key=lambda clump: clump.ncl)
-        return grandparents
+        root_parents = set([neighbour.root_parent for neighbour in neighbours])
+        return root_parents
 
 
 if __name__ == "__main__":
