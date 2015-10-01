@@ -43,6 +43,7 @@ import os
 import argparse
 import datetime
 import copy
+from collections import deque
 
 import numpy as np
 # Import FITS IO.
@@ -743,61 +744,61 @@ class Clump(PixelLike):
         directly or indirectly through other connected clumps.  This structure
         is used for building the dendrogram.  In other words, connected clumps
         make up a graph data structure.  We now want to find all the clumps
-        (nodes) connected to clump self -- i.e. to discover the whole graph.
+        (nodes) connected to this clump -- i.e. to discover the whole graph.
 
-        This method saves the last returned value in self.connected.
+        This method saves the last returned value in self.connected to improve
+        the performance of successive graph traversals.
 
-        Return connected -- dict of connected clumps in the form of
+        Returns a dict with clumps connected to this clump in the form of
         {clump: connects_at_dval, ...}, where connects_at_dval is the data
-        value at which the clump connects.
+        value at which a given clump connects.  The clump itself is not
+        contained in the dict.
         """
 
         # Init the queue of clumps to explore; start with self.merger.
         # Queue format: [[clump, dval], ...], where dval is the data value at
-        # which the clump connects.
-        # NOTE: Only expanded clumps are expected in the queue.
-        queue = [[self.merger, self.merger.dpeak]]
+        # which a given clump connects.
+        # NOTE: Only mergers are expected in the queue.
+        q = deque()
+        q.append((self.merger, self.merger.dpeak))
 
-        # Init the connected dict.
-        # NOTE: Only expanded clumps are expected in the dict
-        connected = dict(queue)
+        # Dict with connected clumps that will be returned.
+        # NOTE: Only expanded clumps are expected in the dict.
+        connected = dict(q)
 
-        # Find all connected clumps (discover the whole graph, incl. clump
-        # self).
-        while queue:
-            # LIFO queue --> depth-first traversal
-            next_in_queue = queue.pop()
-            focused_clump = next_in_queue[0]
-            focused_valley = next_in_queue[1]
+        # Find all connected clumps (discover the whole graph).
+        while q:
+            next_clump = q.popleft()  # Breadth-first traversal.
+            focused_clump = next_clump[0]
+            focused_valley = next_clump[1]
             assert not focused_clump.merged, \
                 "Only expanded clumps are expected in the queue."
             if focused_clump.connected:
-                # Reuse what has been discovered for the focused clump.
-                for child_clump, child_valley in focused_clump.connected.items():
+                # Reuse what has been already discovered.
+                for child, child_valley in focused_clump.connected.items():
                     min_valley = min(focused_valley, child_valley)
-                    if child_clump in connected:
-                        min_valley = max(min_valley, connected[child_clump])
-                    connected.update({child_clump: min_valley})
+                    if child in connected:
+                        min_valley = max(min_valley, connected[child])
+                    connected.update({child: min_valley})
             else:
-                for child_clump, child_valley in focused_clump.touching.items():
-                    # Expand the clump.
-                    exp_child_clump = child_clump.merger
+                for child, child_valley in focused_clump.touching.items():
+                    # Get the merger.
+                    child_merger = child.merger
                     # Get the minimal data value along the path.
                     min_valley= min(focused_valley, child_valley)
-                    if exp_child_clump in connected:
+                    if child_merger in connected:
                         # Rediscovered clump; update if found a better/"higher"
                         # path (with greater minimal dval along it).
-                        if min_valley > connected[exp_child_clump]:
-                            queue.append([exp_child_clump, min_valley])
-                            connected[exp_child_clump] = min_valley
+                        if min_valley > connected[child_merger]:
+                            q.append((child_merger, min_valley))
+                            connected[child_merger] = min_valley
                     else:
                         # Newly discovered clump
-                        queue.append([exp_child_clump, min_valley])
-                        connected.update({exp_child_clump: min_valley})
+                        q.append((child_merger, min_valley))
+                        connected.update({child_merger: min_valley})
 
-        # Remove self.merger from connected.
+        # Exclude the clump itself from connected.
         del connected[self.merger]
-
         self.connected = connected
         return connected
 
