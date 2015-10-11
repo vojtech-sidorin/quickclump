@@ -721,17 +721,20 @@ class Clump(PixelLike):
         """Compact the touching dict.
 
         (1) Remove references to rejected clumps (with final_ncl == None).
-        (2) Ensure the touching dict is unique (solving mergers).  If more
+        (2) Remove references to the clump itself. (That may result from
+            merging a touched clump to this clump.)
+        (3) Ensure the touching dict is unique (solving mergers).  If more
             references to the same clump are found, sets the touching_at_dval
             to the highest value.
         """
         new_touching = {}
         for clump, touching_at_dval in self.touching.items():
-             # Expand the touched clump.
             exp_clump = clump.merger
             if exp_clump.final_ncl == None:
                 continue
-            if ((exp_clump not in new_touching) or
+            elif exp_clump is self:
+                continue
+            elif ((exp_clump not in new_touching) or
                     (touching_at_dval > new_touching[exp_clump])):
                 new_touching.update({exp_clump: touching_at_dval})
         self.touching = new_touching
