@@ -344,30 +344,30 @@ def find_all_clumps(idata, clmask, clumps, options):
     assert clmask.shape == idata.shape
 
     # Sort flattened keys of idata array.
-    skeys1 = idata.argsort(axis=None)[::-1]
+    sorted_px_fkeys = idata.argsort(axis=None)
 
     # Find clumps -- loop over sorted keys of pixels starting at maximum.
     ncl = -1  # Initialise clump index.
     assert options.Tcutoff > idata[0, 0, 0]
-    for key1 in skeys1:
+    for px_fkey in sorted_px_fkeys[::-1]:
 
-        # Derive key3 (3-D key)
-        key3 = np.unravel_index(key1, idata.shape)
+        # Derive n-dim px key
+        px_key = np.unravel_index(px_fkey, idata.shape)
 
         # Get data value
-        dval = idata[key3]
+        dval = idata[px_key]
 
         # Skip NANs
         if dval is np.nan:
             continue
 
-        # Terminate if dval < Tcutoff.  Since the keys are sorted, we can
-        # terminate the loop.
+        # Terminate if dval < Tcutoff.  The keys are sorted so we don't need
+        # to process the remaining pixels.
         if dval < options.Tcutoff:
             break
 
         # Initialize pixel
-        px = Pixel(key3, dval)
+        px = Pixel(px_key, dval)
 
         # Find neighbours (clumps touching at this pixel)
         neighbours = sorted(px.get_neighbours(clmask, clumps),
@@ -377,10 +377,10 @@ def find_all_clumps(idata, clmask, clumps, options):
             # No neighbour --> Make a new clump
             ncl += 1
             clumps.append(Clump(ncl, px))
-            clmask[key3] = ncl
+            clmask[px_key] = ncl
         elif len(neighbours) == 1:
             # One neighbour --> Add pixel to it
-            clmask[key3] = neighbours[0].ncl
+            clmask[px_key] = neighbours[0].ncl
             neighbours[0].add_px(px)
         else:
             # More neighbours --> Merge/connect them
@@ -412,7 +412,7 @@ def find_all_clumps(idata, clmask, clumps, options):
                         merger = neighbour
 
             # Add pixel to merger
-            clmask[key3] = merger.ncl
+            clmask[px_key] = merger.ncl
             merger.add_px(px)
 
             # (2) Update the properties of the neighbouring clumps.
@@ -721,17 +721,20 @@ class Clump(PixelLike):
         """Compact the touching dict.
 
         (1) Remove references to rejected clumps (with final_ncl == None).
-        (2) Ensure the touching dict is unique (solving mergers).  If more
+        (2) Remove references to the clump itself. (That may result from
+            merging a touched clump to this clump.)
+        (3) Ensure the touching dict is unique (solving mergers).  If more
             references to the same clump are found, sets the touching_at_dval
             to the highest value.
         """
         new_touching = {}
         for clump, touching_at_dval in self.touching.items():
-             # Expand the touched clump.
             exp_clump = clump.merger
             if exp_clump.final_ncl == None:
                 continue
-            if ((exp_clump not in new_touching) or
+            elif exp_clump is self:
+                continue
+            elif ((exp_clump not in new_touching) or
                     (touching_at_dval > new_touching[exp_clump])):
                 new_touching.update({exp_clump: touching_at_dval})
         self.touching = new_touching
