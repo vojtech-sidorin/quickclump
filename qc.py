@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Quickclump - identify clumps within a 3D FITS datacube.
 #
-# Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2016 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,14 +38,13 @@ To run in the interactive mode, type
 For more information, see README.md.
 """
 
-import sys
-import os
 import argparse
-import datetime
-import copy
 from collections import deque
+import copy
+import datetime
+import os
+import sys
 
-import numpy as np
 # Import FITS IO.
 # NOTE: PyFITS was merged into Astropy.
 try:
@@ -56,8 +55,10 @@ except ImportError:
     except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Have you installed 'astropy' or 'pyfits'?")
+import numpy as np
 
-__version__ = "1.3-3"
+# Semantic versioning; see <http://semver.org/>.
+__version__ = "1.3.3"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0

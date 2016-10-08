@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Tests for Quickclump.
 #
-# Copyright 2015 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2016 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import shutil
-import unittest
-import hashlib
+import sys
 import tempfile
+import unittest
 
 import numpy as np
 # Import FITS IO.
@@ -211,14 +210,11 @@ class TestCheckOptions(unittest.TestCase):
         self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
 
 
-class TestMain(unittest.TestCase):
-    """Integration testing: Test function main.
+class TestRegression(unittest.TestCase):
+    """Regression test: Test if the program produces expected output."""
 
-    Let Quickclump process sample FITS files and compare the output
-    with expected results.
-    """
-
-    SAMPLE_FILES_PREFIXES = ["rand_normal",
+    # Use these sample input FITS files. (Prefixes without the .fits extension.)
+    SAMPLE_IFITS_PREFIXES = ["rand_normal",
                              "rand_uniform"]
 
     def setUp(self):
@@ -230,14 +226,14 @@ class TestMain(unittest.TestCase):
 
     def test_on_sample_input_files(self):
         """Run main() on sample files and check results."""
-        for f in self.SAMPLE_FILES_PREFIXES:
+        for f in self.SAMPLE_IFITS_PREFIXES:
 
             # Run main() on the sample file.
             ifits = os.path.join(SAMPLE_FILES_DIR, f + ".fits")
-            test_ofits = os.path.join(self.tmpd, f + ".clumps.fits")
-            test_otext = os.path.join(self.tmpd, f + ".clumps.txt")
+            result_ofits = os.path.join(self.tmpd, f + ".clumps.fits")
+            result_otext = os.path.join(self.tmpd, f + ".clumps.txt")
             qc.main("--ofits {ofits} --otext {otext} {ifits} --silent"
-                    .format(ofits=test_ofits, otext=test_otext, ifits=ifits)
+                    .format(ofits=result_ofits, otext=result_otext, ifits=ifits)
                     .split())
 
             # Compare FITS results.
@@ -245,33 +241,31 @@ class TestMain(unittest.TestCase):
             with fits.open(expected_ofits) as g:
                 expected_odata = g[0].data
                 expected_header = g[0].header
-            with fits.open(test_ofits) as h:
-                test_odata = h[0].data
-                test_header = h[0].header
-            # Compare data.
-            self.assertEqual(hashlib.sha512(expected_odata).hexdigest(),
-                             hashlib.sha512(test_odata).hexdigest(),
+            with fits.open(result_ofits) as h:
+                result_odata = h[0].data
+                result_header = h[0].header
+            # ... data.
+            self.assertEqual(list(expected_odata.flatten()),
+                             list(result_odata.flatten()),
                              msg="Data in FITS files '{0}' and '{1}' differ."
-                                 .format(expected_ofits, test_ofits))
-            # Compare header.
+                             .format(expected_ofits, result_ofits))
+            # ... header.
             # Before comparison, remove the card DATE from the header.  This
             # card will contain a timestamp of the file creation and should be
             # excluded from the comparison.
             del expected_header["DATE"]
-            del test_header["DATE"]
-            self.assertSequenceEqual(expected_header, test_header)
+            del result_header["DATE"]
+            self.assertSequenceEqual(expected_header, result_header)
 
             # Compare TXT results.
             expected_otext = os.path.join(SAMPLE_FILES_DIR, f + ".clumps.txt")
             with open(expected_otext, "rb") as g:
                 expected_otext_contents = g.read()
-            with open(test_otext, "rb") as h:
-                test_otext_contents = h.read()
-            self.assertEqual(
-                    hashlib.sha512(expected_otext_contents).hexdigest(),
-                    hashlib.sha512(test_otext_contents).hexdigest(),
-                    msg="Files '{0}' and {1} differ."
-                        .format(expected_otext, test_otext))
+            with open(result_otext, "rb") as h:
+                result_otext_contents = h.read()
+            self.assertEqual(expected_otext_contents, result_otext_contents,
+                             msg="Files '{0}' and {1} differ."
+                             .format(expected_otext, result_otext))
 
 
 if __name__ == "__main__":
