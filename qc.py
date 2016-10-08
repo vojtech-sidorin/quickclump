@@ -57,7 +57,8 @@ except ImportError:
                  "Have you installed 'astropy' or 'pyfits'?")
 import numpy as np
 
-__version__ = "1.3-3"
+# Semantic versioning; see <http://semver.org/>.
+__version__ = "1.3.3"
 
 DEFAULT_NPXMIN = 5
 DEFAULT_VERBOSE = 0
