@@ -17,10 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import shutil
-import unittest
+import sys
 import tempfile
+import unittest
 
 import numpy as np
 # Import FITS IO.

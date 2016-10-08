@@ -38,14 +38,13 @@ To run in the interactive mode, type
 For more information, see README.md.
 """
 
-import sys
-import os
 import argparse
-import datetime
-import copy
 from collections import deque
+import copy
+import datetime
+import os
+import sys
 
-import numpy as np
 # Import FITS IO.
 # NOTE: PyFITS was merged into Astropy.
 try:
@@ -56,6 +55,7 @@ except ImportError:
     except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Have you installed 'astropy' or 'pyfits'?")
+import numpy as np
 
 __version__ = "1.3-3"
 
