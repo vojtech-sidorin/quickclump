@@ -20,7 +20,6 @@ import os
 import sys
 import shutil
 import unittest
-import hashlib
 import tempfile
 
 import numpy as np
@@ -245,12 +244,12 @@ class TestRegression(unittest.TestCase):
             with fits.open(result_ofits) as h:
                 result_odata = h[0].data
                 result_header = h[0].header
-            # Compare data.
-            self.assertEqual(hashlib.sha512(expected_odata).hexdigest(),
-                             hashlib.sha512(result_odata).hexdigest(),
+            # ... data.
+            self.assertEqual(list(expected_odata.flatten()),
+                             list(result_odata.flatten()),
                              msg="Data in FITS files '{0}' and '{1}' differ."
-                                 .format(expected_ofits, result_ofits))
-            # Compare header.
+                             .format(expected_ofits, result_ofits))
+            # ... header.
             # Before comparison, remove the card DATE from the header.  This
             # card will contain a timestamp of the file creation and should be
             # excluded from the comparison.
@@ -264,11 +263,9 @@ class TestRegression(unittest.TestCase):
                 expected_otext_contents = g.read()
             with open(result_otext, "rb") as h:
                 result_otext_contents = h.read()
-            self.assertEqual(
-                    hashlib.sha512(expected_otext_contents).hexdigest(),
-                    hashlib.sha512(result_otext_contents).hexdigest(),
-                    msg="Files '{0}' and {1} differ."
-                        .format(expected_otext, result_otext))
+            self.assertEqual(expected_otext_contents, result_otext_contents,
+                             msg="Files '{0}' and {1} differ."
+                             .format(expected_otext, result_otext))
 
 
 if __name__ == "__main__":
