@@ -183,31 +183,29 @@ class TestCheckOptions(unittest.TestCase):
             delattr(self.options, option)
 
     def test_correct_values(self):
-        self.options.Tcutoff = 1.
-        self.options.dTleaf = 1.
-        self.assertIsNone(qc.check_options(self.options))
+        correct_values = [1, 1., 0.1, 257, 257., 1e2, int(1e215), float("inf")]
+        for self.options.Tcutoff in correct_values:
+            for self.options.dTleaf in correct_values:
+                self.assertIsNone(qc.check_options(self.options))
 
     def test_incorrect_values(self):
-        # negative Tcutoff
-        self.options.Tcutoff = -1.
-        self.options.dTleaf = 1.
-        self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
-        # negative dTleaf
-        self.options.Tcutoff = 1.
-        self.options.dTleaf = -1.
-        self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
-        # negative Tcutoff and dTleaf
-        self.options.Tcutoff = -1.
-        self.options.dTleaf = -1.
-        self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
-        # nan Tcutoff
-        self.options.Tcutoff = float("nan")
-        self.options.dTleaf = 1.
-        self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
-        # -inf Tcutoff
-        self.options.Tcutoff = float("-inf")
-        self.options.dTleaf = 1.
-        self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
+        correct_value = 1.
+        incorrect_values = [-1, -1., -1e2, float("-inf"), float("nan")]
+        # Correct Tcutoff & incorrect dTleaf.
+        self.options.Tcutoff = correct_value
+        for self.options.dTleaf in incorrect_values:
+            self.assertRaises(qc.OutOfBoundsError, qc.check_options,
+                              self.options)
+        # Correct dTleaf & incorrect Tcutoff.
+        self.options.dTleaf = correct_value
+        for self.options.Tcutoff in incorrect_values:
+            self.assertRaises(qc.OutOfBoundsError, qc.check_options,
+                              self.options)
+        # Incorrect both.
+        for self.options.Tcutoff in incorrect_values:
+            for self.options.dTleaf in incorrect_values:
+                self.assertRaises(qc.OutOfBoundsError, qc.check_options,
+                                  self.options)
 
 
 class TestRegression(unittest.TestCase):

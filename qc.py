@@ -75,6 +75,7 @@ PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
 
 
 def main(argv=None):
+    """The main entry point."""
     try:
         _main(argv=argv)
     except (IOError, InputDataError, OutOfBoundsError) as e:
@@ -314,9 +315,11 @@ def check_options(options):
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
     if not options.dTleaf > 0.:
-        raise OutOfBoundsError("'dTleaf' must be > 0.")
+        raise OutOfBoundsError("'dTleaf' must be > 0. It is {0}."
+                               .format(options.dTleaf))
     if not options.Tcutoff > 0.:
-        raise OutOfBoundsError("'Tcutoff' must be > 0.")
+        raise OutOfBoundsError("'Tcutoff' must be > 0. It is {0}."
+                               .format(options.Tcutoff))
 
 
 def find_all_clumps(idata, clmask, clumps, options):
@@ -697,7 +700,7 @@ class Clump(PixelLike):
         assert self is not other, "Attempt to merge clump to itself."
         self.pixels.extend(other.pixels)
         self.xyz = ((self.wxyz*self.xyz + other.wxyz*other.xyz)/
-                        (self.wxyz + other.wxyz))
+                    (self.wxyz + other.wxyz))
         self.wxyz += other.wxyz
         for clump, touching_at_dval in other.touching.items():
             self.update_touching(clump, touching_at_dval)
@@ -736,7 +739,7 @@ class Clump(PixelLike):
             elif exp_clump is self:
                 continue
             elif ((exp_clump not in new_touching) or
-                    (touching_at_dval > new_touching[exp_clump])):
+                  (touching_at_dval > new_touching[exp_clump])):
                 new_touching.update({exp_clump: touching_at_dval})
         self.touching = new_touching
 
@@ -836,7 +839,7 @@ class Clump(PixelLike):
 
         # Sort list of pixels (order by dval, k, j, i).
         self.pixels.sort(key=lambda px:
-                            (-px.dval, px.ijk[2], px.ijk[1], px.ijk[0]))
+                         (-px.dval, px.ijk[2], px.ijk[1], px.ijk[0]))
 
         # Generate str_ to be returned.
         str_ = ["clump: {final_ncl}\n"
