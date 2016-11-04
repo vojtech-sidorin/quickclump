@@ -67,4 +67,4 @@ the size of your input datacube.
 
 ## Notes
 
--   Tested in Python 2.7 and 3.4.
+-   Tested in Python 2.7 and 3.5.
