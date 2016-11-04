@@ -314,9 +314,11 @@ def check_options(options):
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
     if not options.dTleaf > 0.:
-        raise OutOfBoundsError("'dTleaf' must be > 0.")
+        raise OutOfBoundsError("'dTleaf' must be > 0. It is {0}."
+                               .format(options.dTleaf))
     if not options.Tcutoff > 0.:
-        raise OutOfBoundsError("'Tcutoff' must be > 0.")
+        raise OutOfBoundsError("'Tcutoff' must be > 0. It is {0}."
+                               .format(options.Tcutoff))
 
 
 def find_all_clumps(idata, clmask, clumps, options):
