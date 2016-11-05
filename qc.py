@@ -65,21 +65,22 @@ DEFAULT_VERBOSE = 0
 # What verbose level will option --silent set.
 SILENT_VERBOSE = -1
 # Relative map of a pixel's neighbourhood.
-# pylint: disable=bad-whitespace
+# pragma pylint: disable=bad-whitespace
 PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
                        ( 0,  0, -1),
                        ( 0, +1,  0),
                        ( 0, -1,  0),
                        (+1,  0,  0),
                        (-1,  0,  0))
+# pragma pylint: enable=bad-whitespace
 
 
 def main(argv=None):
     """The main entry point."""
     try:
         _main(argv=argv)
-    except (IOError, InputDataError, OutOfBoundsError) as e:
-        sys.stderr.write("{0}: {1}\n".format(e.__class__.__name__, str(e)))
+    except (IOError, InputDataError, OutOfBoundsError) as exc:
+        sys.stderr.write("{0}: {1}\n".format(exc.__class__.__name__, str(exc)))
         return 1
 
 
@@ -90,8 +91,8 @@ def _main(argv=None):
     # Load the input data (a FITS datacube).
     try:
         idata = load_idata(options.ifits)
-    except IOError as e:
-        msg = "Cannot load file '{0}'. {e}".format(options.ifits, e=e)
+    except IOError as exc:
+        msg = "Cannot load file '{0}'. {1}".format(options.ifits, exc)
         raise IOError(msg)
 
     options = set_defaults(options, idata)
@@ -646,15 +647,17 @@ class Clump(PixelLike):
 
     @property
     def pixels(self):
+        """Return the pixels assigned to the clump."""
         return self._pixels
 
     @property
     def npx(self):
+        """Return the number of pixels assigned to the clump."""
         return len(self._pixels)
 
     @property
     def parent(self):
-        """Return self or clump's parent."""
+        """Return the clump's parent if it exists or the clump itself."""
         if self._parent is self:
             return self
         else:
@@ -691,20 +694,17 @@ class Clump(PixelLike):
 
     def merge_to_parent(self):
         """Merge clump to its parent."""
-        self.parent.merge(self)
-
-    def merge(self, other):
-        """Merge other clump to this clump."""
-        assert not other.merged, "Attempt to merge already merged clump."
-        assert not self.merged, "Attempt to merge to merged clump."
-        assert self is not other, "Attempt to merge clump to itself."
-        self.pixels.extend(other.pixels)
-        self.xyz = ((self.wxyz*self.xyz + other.wxyz*other.xyz)/
-                    (self.wxyz + other.wxyz))
-        self.wxyz += other.wxyz
-        for clump, touching_at_dval in other.touching.items():
-            self.update_touching(clump, touching_at_dval)
-        other._merged = True
+        parent = self.parent
+        assert self is not parent, "Attempt to merge clump to itself."
+        assert not self.merged, "Attempt to merge already merged clump."
+        assert not parent.merged, "Attempt to merge to merged clump."
+        parent.pixels.extend(self.pixels)
+        parent.xyz = ((parent.wxyz*parent.xyz + self.wxyz*self.xyz)/
+                      (parent.wxyz + self.wxyz))
+        parent.wxyz += self.wxyz
+        for clump, touching_at_dval in self.touching.items():
+            parent.update_touching(clump, touching_at_dval)
+        self._merged = True
 
     def update_touching(self, other, dval):
         """Add clump other to the dict of touching clumps.
@@ -734,7 +734,7 @@ class Clump(PixelLike):
         new_touching = {}
         for clump, touching_at_dval in self.touching.items():
             exp_clump = clump.merger
-            if exp_clump.final_ncl == None:
+            if exp_clump.final_ncl is None:
                 continue
             elif exp_clump is self:
                 continue
@@ -792,7 +792,7 @@ class Clump(PixelLike):
                     # Get the merger.
                     child_merger = child.merger
                     # Get the minimal data value along the path.
-                    min_valley= min(focused_valley, child_valley)
+                    min_valley = min(focused_valley, child_valley)
                     if child_merger in connected:
                         # Rediscovered clump; update if found a better/"higher"
                         # path (with greater minimal dval along it).
@@ -833,8 +833,7 @@ class Clump(PixelLike):
 
         # Get connected clumps.
         # Then sort them (by dval_at_which_they_connect, ncl).
-        connected = self.get_connected()
-        connected = list(connected.items())
+        connected = list(self.get_connected().items())
         connected.sort(key=lambda x: (-x[1], x[0].final_ncl))
 
         # Sort list of pixels (order by dval, k, j, i).
@@ -871,9 +870,8 @@ class Clump(PixelLike):
         str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
                      "".format(final_ncl=c[0].final_ncl, dval=float(c[1]))
                      for c in connected])
-        str_ = "".join(str_)
 
-        return str_
+        return "".join(str_)
 
 
 class Pixel(PixelLike):
