@@ -48,48 +48,48 @@ class TestParseArgs(unittest.TestCase):
     # the expected values must be found in the namespace returned by
     # function parse_args.
     ARGS_MAP = [
-            ["file.fits",
-                {
-                    "ifits": "file.fits",
-                    "dTleaf": None,
-                    "Tcutoff": None,
-                    "Npxmin": qc.DEFAULT_NPXMIN,
-                    "ofits": None,
-                    "otext": None,
-                    "loglevel": qc.DEFAULT_LOGLEVEL
-                    }
-                ],
-            ["file.fits --dTleaf 1.234 --Tcutoff 2.345 --Npxmin 3 "
-                "--ofits out.fits --otext clumps.txt -v",
-                {
-                    "ifits": "file.fits",
-                    "dTleaf": 1.234,
-                    "Tcutoff": 2.345,
-                    "Npxmin": 3,
-                    "ofits": "out.fits",
-                    "otext": "clumps.txt",
-                    "loglevel": "DEBUG"
-                    }
-                ],
-            ["file.fits --loglevel CRITICAL -vvv --loglevel WARNING",
-                {
-                    "ifits": "file.fits",
-                    "loglevel": "WARNING"
-                    }
-                ],
-            ["file.fits -v --loglevel ERROR -v",
-                {
-                    "ifits": "file.fits",
-                    "loglevel": qc.VERBOSE_LOGLEVEL
-                    }
-                ],
-            ["file.fits --silent",
-                {
-                    "ifits": "file.fits",
-                    "loglevel": qc.SILENT_LOGLEVEL
-                    }
-                ]
-            ]
+        ["file.fits",
+         {
+             "ifits": "file.fits",
+             "dTleaf": None,
+             "Tcutoff": None,
+             "Npxmin": qc.DEFAULT_NPXMIN,
+             "ofits": None,
+             "otext": None,
+             "loglevel": qc.DEFAULT_LOGLEVEL
+             }
+        ],
+        ["file.fits --dTleaf 1.234 --Tcutoff 2.345 --Npxmin 3 "
+         "--ofits out.fits --otext clumps.txt -v",
+         {
+             "ifits": "file.fits",
+             "dTleaf": 1.234,
+             "Tcutoff": 2.345,
+             "Npxmin": 3,
+             "ofits": "out.fits",
+             "otext": "clumps.txt",
+             "loglevel": "DEBUG"
+             }
+        ],
+        ["file.fits --loglevel CRITICAL -vvv --loglevel WARNING",
+         {
+             "ifits": "file.fits",
+             "loglevel": "WARNING"
+             }
+        ],
+        ["file.fits -v --loglevel ERROR -v",
+         {
+             "ifits": "file.fits",
+             "loglevel": qc.VERBOSE_LOGLEVEL
+             }
+        ],
+        ["file.fits --silent",
+         {
+             "ifits": "file.fits",
+             "loglevel": qc.SILENT_LOGLEVEL
+             }
+        ]
+        ]
 
     def test_correct_args(self):
         for args, expected in self.ARGS_MAP:
@@ -123,12 +123,12 @@ class TestLoadIdata(unittest.TestCase):
         """Test if idata are surrounded with -inf border."""
         for filename in self.THREE_DIM_FITS:
             idata = qc.load_idata(filename)
-            self.assertTrue(np.all(np.isneginf(idata[0,:,:])))
-            self.assertTrue(np.all(np.isneginf(idata[-1,:,:])))
-            self.assertTrue(np.all(np.isneginf(idata[:,0,:])))
-            self.assertTrue(np.all(np.isneginf(idata[:,-1,:])))
-            self.assertTrue(np.all(np.isneginf(idata[:,:,0])))
-            self.assertTrue(np.all(np.isneginf(idata[:,:,-1])))
+            self.assertTrue(np.all(np.isneginf(idata[0, :, :])))
+            self.assertTrue(np.all(np.isneginf(idata[-1, :, :])))
+            self.assertTrue(np.all(np.isneginf(idata[:, 0, :])))
+            self.assertTrue(np.all(np.isneginf(idata[:, -1, :])))
+            self.assertTrue(np.all(np.isneginf(idata[:, :, 0])))
+            self.assertTrue(np.all(np.isneginf(idata[:, :, -1])))
 
 
 class TestSetDefaults(unittest.TestCase):
