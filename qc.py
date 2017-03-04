@@ -59,7 +59,7 @@ except ImportError:
 import numpy as np
 
 # Semantic versioning; see <http://semver.org/>.
-__version__ = "1.3.3"
+__version__ = "1.4.3"
 
 # Global settings.
 DEFAULT_NPXMIN = 5
