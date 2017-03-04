@@ -42,6 +42,7 @@ import argparse
 from collections import deque
 import copy
 import datetime
+import logging
 import os
 import sys
 
@@ -60,10 +61,11 @@ import numpy as np
 # Semantic versioning; see <http://semver.org/>.
 __version__ = "1.3.3"
 
+# Global settings.
 DEFAULT_NPXMIN = 5
-DEFAULT_VERBOSE = 0
-# What verbose level will option --silent set.
-SILENT_VERBOSE = -1
+DEFAULT_LOGLEVEL = "INFO"
+VERBOSE_LOGLEVEL = "DEBUG"
+SILENT_LOGLEVEL = "CRITICAL"
 # Relative map of a pixel's neighbourhood.
 # pragma pylint: disable=bad-whitespace
 PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
@@ -73,6 +75,13 @@ PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
                        (+1,  0,  0),
                        (-1,  0,  0))
 # pragma pylint: enable=bad-whitespace
+
+# Set the global logger.
+LOGGER = logging.getLogger(__name__)
+CONSOLE_HANDLER = logging.StreamHandler()
+FORMATTER = logging.Formatter("%(levelname)s - %(message)s")
+CONSOLE_HANDLER.setFormatter(FORMATTER)
+LOGGER.addHandler(CONSOLE_HANDLER)
 
 
 def main(argv=None):
@@ -113,34 +122,30 @@ def _main(argv=None):
     # The discovered clumps will be collected in this list.
     clumps = []
 
-    if options.verbose > 0:
-        print("Finding clumps.")
+    LOGGER.debug("Finding clumps.")
     find_all_clumps(idata, clmask, clumps, options)
 
-    if options.verbose > 0:
-        print("Merging small clumps.")
+    LOGGER.debug("Merging small clumps.")
     merge_small_clumps(clumps, options.Npxmin)
 
-    if options.verbose > 0:
-        print("Renumbering clumps.")
+    LOGGER.debug("Renumbering clumps.")
     final_clumps_count = renumber_clumps(clumps, options.Npxmin)
     renumber_clmask(clmask, clumps)
-    if options.verbose > SILENT_VERBOSE:
-        print("{N} clumps found.".format(N=final_clumps_count))
-    # NOTE: The clumps have now been set their final labels/numbers, which
-    # are stored in attribute final_ncl.
-    # NOTE: Too small clumps, those with Npx < Npxmin, have been set their
-    # final_ncl to 0.
+
+    # NOTE: The clumps have now set their final labels/numbers, stored in the
+    # attribute final_ncl.
+    # NOTE: The final_ncl of clumps that are too smal, with Npx < Npxmin, has
+    # been set to 0.
 
     if options.ofits.strip().upper() != "NONE":
-        if options.verbose > 0:
-            print("Writing output FITS.")
+        LOGGER.debug("Writing output FITS.")
         write_ofits(options.ofits, clmask, final_clumps_count, options)
 
     if options.otext.strip().upper() != "NONE":
-        if options.verbose > 0:
-            print("Writing output text file.")
+        LOGGER.debug("Writing output text file.")
         write_otext(options.otext, clumps, options)
+
+    LOGGER.info("%i clumps found.", final_clumps_count)
 
 
 def parse_args(argv=None):
@@ -149,41 +154,70 @@ def parse_args(argv=None):
         description="Identifies clumps within a 3D FITS datacube.")
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("--dTleaf", type=float, help="Minimal depth of a "
-                        "valley separating adjacent clumps.  Clumps separated "
-                        "by a valley that is shallower will be merged "
-                        "together.  "
-                        "Must be > 0.  "
-                        "(default: 3*sig_noise)")
-    parser.add_argument("--Tcutoff", type=float, help="Minimal data value to "
-                        "consider.  Pixels with lower values won't be "
-                        "processed.  Must be > 0.  (default: 3*sig_noise)")
-    parser.add_argument("--Npxmin", type=int, default=DEFAULT_NPXMIN,
-                        help="Minimal size of a clump in pixels.  "
-                        "Smaller clumps will be either merged to an adjacent "
-                        "clumps or deleted.  "
-                        "(default: %(default)s)")
-    parser.add_argument("--ofits", help="FITS file where the found clumps "
-                        "will be saved.  If OFITS exists, it will be "
-                        "overwritten.  If set to 'None' (case doesn't "
-                        "matter), OFITS file won't be written.  "
-                        "(default: ifits with modified extension "
-                        "'.clumps.fits')")
-    parser.add_argument("--otext", help="Text file where the found clumps "
-                        "will be saved in a human-readable form.  If OTEXT "
-                        "exists, it will be overwritten.  If set to 'None' "
-                        "(case insensitive), OTEXT file won't be written.  "
-                        "This will speed up the program's execution.  On the "
-                        "other hand, the OTEXT file is needed for the "
-                        "construction of a dendrogram.  "
-                        "(default: ifits with modified extension "
-                        "'.clumps.txt')")
-    parser.add_argument("--verbose", "-v", action="count",
-                        default=DEFAULT_VERBOSE, help="Increase verbosity.")
-    parser.add_argument("--silent", dest="verbose", action="store_const",
-                        const=SILENT_VERBOSE, help="Suppress output to "
-                        "stdout; i.e. set verbosity to a minimum.")
+    parser.add_argument(
+        "--dTleaf",
+        type=float,
+        help="Minimal depth of a valley separating adjacent clumps.  Clumps "
+             "separated by a valley that is shallower will be merged "
+             "together.  Must be > 0.  (default: 3*sig_noise)"
+        )
+    parser.add_argument(
+        "--Tcutoff",
+        type=float,
+        help="Minimal data value to consider.  Pixels with lower values won't "
+             "be processed.  Must be > 0.  (default: 3*sig_noise)"
+        )
+    parser.add_argument(
+        "--Npxmin",
+        type=int,
+        default=DEFAULT_NPXMIN,
+        help="Minimal size of a clump in pixels.  Smaller clumps will be "
+             "either merged to an adjacent clumps or deleted.  "
+             "(default: %(default)s)"
+        )
+    parser.add_argument(
+        "--ofits",
+        help="FITS file where the found clumps will be saved.  If OFITS "
+             "exists, it will be overwritten.  If set to 'None' (case doesn't "
+             "matter), OFITS file won't be written.  "
+             "(default: ifits with modified extension '.clumps.fits')"
+        )
+    parser.add_argument(
+        "--otext",
+        help="Text file where the found clumps will be saved in a "
+             "human-readable form.  If OTEXT exists, it will be overwritten.  "
+             "If set to 'None' (case insensitive), OTEXT file won't be "
+             "written.  This will speed up the program's execution.  On the "
+             "other hand, the OTEXT file is needed for the construction of a "
+             "dendrogram.  (default: ifits with modified extension "
+             "'.clumps.txt')")
+    parser.add_argument(
+        "--loglevel",
+        dest="loglevel",
+        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
+        help="Threshold determining which types of messages will be shown. "
+             "Only messages with severity greater than or equal to a given "
+             "level will be shown. (default: %(default)s)",
+        default=DEFAULT_LOGLEVEL
+        )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_const",
+        const=VERBOSE_LOGLEVEL,
+        dest="loglevel",
+        help="Increase verbosity. (Set loglevel to {0}.)"
+             "".format(VERBOSE_LOGLEVEL)
+        )
+    parser.add_argument(
+        "--silent",
+        action="store_const",
+        const=SILENT_LOGLEVEL,
+        dest="loglevel",
+        help="Decrease verbosity. (Set loglevel to {0}.)"
+             "".format(SILENT_LOGLEVEL)
+        )
     args = parser.parse_args(argv)
+    LOGGER.setLevel(args.loglevel)
     return args
 
 
@@ -267,9 +301,8 @@ def set_defaults(options, idata):
 
     # dTleaf/Tcutoff -- 3*sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
-        if options.verbose > 0:
-            print("Options dTleaf and/or Tcutoff not set.  "
-                  "Estimating from the input data.")
+        LOGGER.debug("Options dTleaf and/or Tcutoff was not set. "
+                     "Estimating from the input data.")
 
         # Compute data mean and std.
         valid = idata.view(np.ma.MaskedArray)
@@ -294,18 +327,14 @@ def set_defaults(options, idata):
 
         # Set dTleaf.
         if new_options.dTleaf is None:
-            if options.verbose > 0:
-                print("Setting dTleaf to {dTleaf} (= 3*std_noise = "
-                      "3*{std_noise})"
-                      .format(dTleaf=3.*std_noise, std_noise=std_noise))
+            LOGGER.debug("Setting dTleaf to %f (= 3*std_noise = 3*%f)",
+                         3.*std_noise, std_noise)
             new_options.dTleaf = 3.*std_noise
 
         # Set Tcutoff.
         if new_options.Tcutoff is None:
-            if options.verbose > 0:
-                print("Setting Tcutoff to {Tcutoff} (= 3*std_noise = "
-                      "3*{std_noise})"
-                      .format(Tcutoff=3.*std_noise, std_noise=std_noise))
+            LOGGER.debug("Setting Tcutoff to %f (= 3*std_noise = 3*%f)",
+                         3.*std_noise, std_noise)
             new_options.Tcutoff = 3.*std_noise
 
     return new_options

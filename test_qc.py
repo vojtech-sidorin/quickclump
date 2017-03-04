@@ -48,34 +48,47 @@ class TestParseArgs(unittest.TestCase):
     # the expected values must be found in the namespace returned by
     # function parse_args.
     ARGS_MAP = [
-            ["my_fits.fits",
+            ["file.fits",
                 {
-                "ifits": "my_fits.fits",
-                "dTleaf": None,
-                "Tcutoff": None,
-                "Npxmin": qc.DEFAULT_NPXMIN,
-                "ofits": None,
-                "otext": None,
-                "verbose": qc.DEFAULT_VERBOSE
-                }
-            ],
-            ["my_fits.fits --dTleaf 1.234 --Tcutoff 2.345 --Npxmin 3 "
-                "--ofits out.fits --otext clumps.txt -vvv",
+                    "ifits": "file.fits",
+                    "dTleaf": None,
+                    "Tcutoff": None,
+                    "Npxmin": qc.DEFAULT_NPXMIN,
+                    "ofits": None,
+                    "otext": None,
+                    "loglevel": qc.DEFAULT_LOGLEVEL
+                    }
+                ],
+            ["file.fits --dTleaf 1.234 --Tcutoff 2.345 --Npxmin 3 "
+                "--ofits out.fits --otext clumps.txt -v",
                 {
-                "dTleaf": 1.234,
-                "Tcutoff": 2.345,
-                "Npxmin": 3,
-                "ofits": "out.fits",
-                "otext": "clumps.txt",
-                "verbose": 3
-                }
-            ],
-            ["my_fits.fits --silent",
+                    "ifits": "file.fits",
+                    "dTleaf": 1.234,
+                    "Tcutoff": 2.345,
+                    "Npxmin": 3,
+                    "ofits": "out.fits",
+                    "otext": "clumps.txt",
+                    "loglevel": "DEBUG"
+                    }
+                ],
+            ["file.fits --loglevel CRITICAL -vvv --loglevel WARNING",
                 {
-                "ifits": "my_fits.fits",
-                "verbose": qc.SILENT_VERBOSE
-                }
-            ]
+                    "ifits": "file.fits",
+                    "loglevel": "WARNING"
+                    }
+                ],
+            ["file.fits -v --loglevel ERROR -v",
+                {
+                    "ifits": "file.fits",
+                    "loglevel": qc.VERBOSE_LOGLEVEL
+                    }
+                ],
+            ["file.fits --silent",
+                {
+                    "ifits": "file.fits",
+                    "loglevel": qc.SILENT_LOGLEVEL
+                    }
+                ]
             ]
 
     def test_correct_args(self):
