@@ -776,11 +776,11 @@ class Clump(PixelLike):
 
         """Return clumps connected to this clump.
 
-        Connected clumps are all the clumps which either touch this clump
-        directly or indirectly through other connected clumps.  This structure
-        is used for building the dendrogram.  In other words, connected clumps
-        make up a graph data structure.  We now want to find all the clumps
-        (nodes) connected to this clump -- i.e. to discover the whole graph.
+        Connected clumps are all clumps that either touch this clump directly
+        or indirectly through other connected clumps.  This structure is used
+        for building a dendrogram.  In other words, connected clumps make up a
+        graph data structure.  We now want to find those clumps (nodes) -- i.e.
+        we want to discover the whole graph.
 
         This method saves the last returned value in self.connected to improve
         the performance of successive graph traversals.
