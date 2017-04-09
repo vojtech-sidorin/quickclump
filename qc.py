@@ -96,7 +96,7 @@ def main(argv=None):
     try:
         _main(argv=argv)
     except (IOError, InputDataError, OutOfBoundsError) as exc:
-        sys.stderr.write("{0}: {1}\n".format(exc.__class__.__name__, str(exc)))
+        LOGGER.error(exc)
         return 1
 
 
