@@ -76,12 +76,19 @@ PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
                        (-1,  0,  0))
 # pragma pylint: enable=bad-whitespace
 
-# Set the global logger.
+# Set a global logger.
 LOGGER = logging.getLogger(__name__)
-CONSOLE_HANDLER = logging.StreamHandler()
 FORMATTER = logging.Formatter("%(levelname)s - %(message)s")
-CONSOLE_HANDLER.setFormatter(FORMATTER)
-LOGGER.addHandler(CONSOLE_HANDLER)
+STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
+STDOUT_HANDLER.setFormatter(FORMATTER)
+STDOUT_FILTER = logging.Filter()
+STDOUT_FILTER.filter = lambda rec: rec.levelno < logging.ERROR
+STDOUT_HANDLER.addFilter(STDOUT_FILTER)
+STDERR_HANDLER = logging.StreamHandler(sys.stderr)
+STDERR_HANDLER.setFormatter(FORMATTER)
+STDERR_HANDLER.setLevel(logging.ERROR)
+LOGGER.addHandler(STDOUT_HANDLER)
+LOGGER.addHandler(STDERR_HANDLER)
 
 
 def main(argv=None):
