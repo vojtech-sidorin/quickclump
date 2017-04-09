@@ -108,8 +108,7 @@ def _main(argv=None):
     try:
         idata = load_idata(options.ifits)
     except IOError as exc:
-        msg = "Cannot load file '{0}'. {1}".format(options.ifits, exc)
-        raise IOError(msg)
+        raise IOError(exc)
 
     options = set_defaults(options, idata)
     check_options(options)
