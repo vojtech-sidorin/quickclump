@@ -38,6 +38,9 @@ To run in the interactive mode, type
 For more information, see README.md.
 """
 
+# Semantic versioning; see <http://semver.org/>.
+__version__ = "1.4.3"
+
 import argparse
 from collections import deque
 import copy
@@ -57,9 +60,6 @@ except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
                  "Have you installed 'astropy' or 'pyfits'?")
 import numpy as np
-
-# Semantic versioning; see <http://semver.org/>.
-__version__ = "1.4.3"
 
 # Global settings.
 DEFAULT_NPXMIN = 5
