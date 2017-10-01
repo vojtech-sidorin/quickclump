@@ -39,7 +39,7 @@ For more information, see README.md.
 """
 
 # Semantic versioning; see <http://semver.org/>.
-__version__ = "1.4.3"
+__version__ = "1.4.0"
 
 import argparse
 from collections import deque
