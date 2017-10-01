@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Quickclump - identify clumps within a 3D FITS datacube.
 #
-# Copyright 2016 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2017 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,6 +38,9 @@ To run in the interactive mode, type
 For more information, see README.md.
 """
 
+# Semantic versioning; see <http://semver.org/>.
+__version__ = "1.4.0"
+
 import argparse
 from collections import deque
 import copy
@@ -58,9 +61,6 @@ except ImportError:
                  "Have you installed 'astropy' or 'pyfits'?")
 import numpy as np
 
-# Semantic versioning; see <http://semver.org/>.
-__version__ = "1.4.3"
-
 # Global settings.
 DEFAULT_NPXMIN = 5
 DEFAULT_LOGLEVEL = "INFO"
@@ -76,12 +76,19 @@ PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
                        (-1,  0,  0))
 # pragma pylint: enable=bad-whitespace
 
-# Set the global logger.
+# Set a global logger.
 LOGGER = logging.getLogger(__name__)
-CONSOLE_HANDLER = logging.StreamHandler()
 FORMATTER = logging.Formatter("%(levelname)s - %(message)s")
-CONSOLE_HANDLER.setFormatter(FORMATTER)
-LOGGER.addHandler(CONSOLE_HANDLER)
+STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
+STDOUT_HANDLER.setFormatter(FORMATTER)
+STDOUT_FILTER = logging.Filter()
+STDOUT_FILTER.filter = lambda rec: rec.levelno < logging.ERROR
+STDOUT_HANDLER.addFilter(STDOUT_FILTER)
+STDERR_HANDLER = logging.StreamHandler(sys.stderr)
+STDERR_HANDLER.setFormatter(FORMATTER)
+STDERR_HANDLER.setLevel(logging.ERROR)
+LOGGER.addHandler(STDOUT_HANDLER)
+LOGGER.addHandler(STDERR_HANDLER)
 
 
 def main(argv=None):
@@ -89,7 +96,7 @@ def main(argv=None):
     try:
         _main(argv=argv)
     except (IOError, InputDataError, OutOfBoundsError) as exc:
-        sys.stderr.write("{0}: {1}\n".format(exc.__class__.__name__, str(exc)))
+        LOGGER.error(exc)
         return 1
 
 
@@ -101,8 +108,7 @@ def _main(argv=None):
     try:
         idata = load_idata(options.ifits)
     except IOError as exc:
-        msg = "Cannot load file '{0}'. {1}".format(options.ifits, exc)
-        raise IOError(msg)
+        raise IOError(exc)
 
     options = set_defaults(options, idata)
     check_options(options)
@@ -776,11 +782,11 @@ class Clump(PixelLike):
 
         """Return clumps connected to this clump.
 
-        Connected clumps are all the clumps which either touch this clump
-        directly or indirectly through other connected clumps.  This structure
-        is used for building the dendrogram.  In other words, connected clumps
-        make up a graph data structure.  We now want to find all the clumps
-        (nodes) connected to this clump -- i.e. to discover the whole graph.
+        Connected clumps are all clumps that either touch this clump directly
+        or indirectly through other connected clumps.  This structure is used
+        for building a dendrogram.  In other words, connected clumps make up a
+        graph data structure.  We now want to find those clumps (nodes) -- i.e.
+        we want to discover the whole graph.
 
         This method saves the last returned value in self.connected to improve
         the performance of successive graph traversals.
