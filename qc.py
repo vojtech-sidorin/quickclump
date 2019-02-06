@@ -232,7 +232,7 @@ def load_idata(ifits):
     """Load and preprocess input FITS data."""
 
     # Load the first HDU from the FITS (HDU = header data unit).
-    with fits.open(ifits) as f:
+    with fits.open(ifits) as f:  # pylint: disable=invalid-name
         # f[0] == the first HDU in the file.
         idata = f[0].data  # pylint: disable=no-member
 
