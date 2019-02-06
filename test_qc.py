@@ -32,7 +32,7 @@ except ImportError:
         import pyfits as fits
     except ImportError:
         sys.exit("Error: Cannot find any supported FITS IO package.  "
-                 "Do you have installed 'astropy' or 'pyfits'?")
+                 "Have you installed 'astropy' or 'pyfits'?")
 
 import qc
 
