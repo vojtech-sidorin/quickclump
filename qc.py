@@ -105,10 +105,7 @@ def _main(argv=None):
     options = parse_args(argv)
 
     # Load the input data (a FITS datacube).
-    try:
-        idata = load_idata(options.ifits)
-    except IOError as exc:
-        raise IOError(exc)
+    idata = load_idata(options.ifits)
 
     options = set_defaults(options, idata)
     check_options(options)
