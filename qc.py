@@ -38,6 +38,7 @@ To run in the interactive mode, type
 For more information, see README.md.
 """
 
+
 # Semantic versioning; see <http://semver.org/>.
 __version__ = "1.4.0"
 
@@ -98,6 +99,8 @@ def main(argv=None):
     except (IOError, InputDataError, OutOfBoundsError) as exc:
         LOGGER.error(exc)
         return 1
+    else:
+        return 0
 
 
 def _main(argv=None):
@@ -230,7 +233,8 @@ def load_idata(ifits):
 
     # Load the first HDU from the FITS (HDU = header data unit).
     with fits.open(ifits) as f:
-        idata = f[0].data  # f[0] == the first HDU in the file.
+        # f[0] == the first HDU in the file.
+        idata = f[0].data  # pylint: disable=no-member
 
     # If idata is of integral type, convert to float.  This is to allow
     # the addition of a border around the idata with values of -inf.
@@ -606,7 +610,7 @@ def write_otext(otext, clumps, options):
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Npxmin")
 
-    with open(otext, "w") as f:
+    with open(otext, "w") as f:  # pylint: disable=invalid-name
         # Output the header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
         # compatible with DENDROFIND.  It has no meaning for Quickclump.
@@ -692,8 +696,7 @@ class Clump(PixelLike):
         """Return the clump's parent if it exists or the clump itself."""
         if self._parent is self:
             return self
-        else:
-            return self._parent.merger
+        return self._parent.merger
 
     @parent.setter
     def parent(self, new_parent):
@@ -708,16 +711,14 @@ class Clump(PixelLike):
         """Return self or parent's parent's... parent."""
         if self._parent is self:
             return self
-        else:
-            return self._parent.root_parent
+        return self._parent.root_parent
 
     @property
     def merger(self):
         """Return self or clump to which this clump merges."""
         if self._merged:
             return self.parent
-        else:
-            return self
+        return self
 
     @property
     def merged(self):
@@ -798,16 +799,16 @@ class Clump(PixelLike):
         # Queue format: [[clump, dval], ...], where dval is the data value at
         # which a given clump connects.
         # NOTE: Only mergers are expected in the queue.
-        q = deque()
-        q.append((self.merger, self.merger.dpeak))
+        queue = deque()
+        queue.append((self.merger, self.merger.dpeak))
 
         # Dict with connected clumps that will be returned.
         # NOTE: Only expanded clumps are expected in the dict.
-        connected = dict(q)
+        connected = dict(queue)
 
         # Find all connected clumps (discover the whole graph).
-        while q:
-            next_clump = q.popleft()  # Breadth-first traversal.
+        while queue:
+            next_clump = queue.popleft()  # Breadth-first traversal.
             focused_clump = next_clump[0]
             focused_valley = next_clump[1]
             assert not focused_clump.merged, \
@@ -829,11 +830,11 @@ class Clump(PixelLike):
                         # Rediscovered clump; update if found a better/"higher"
                         # path (with greater minimal dval along it).
                         if min_valley > connected[child_merger]:
-                            q.append((child_merger, min_valley))
+                            queue.append((child_merger, min_valley))
                             connected[child_merger] = min_valley
                     else:
                         # Newly discovered clump
-                        q.append((child_merger, min_valley))
+                        queue.append((child_merger, min_valley))
                         connected.update({child_merger: min_valley})
 
         # Exclude the clump itself from connected.
