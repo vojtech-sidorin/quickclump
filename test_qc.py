@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Tests for Quickclump.
 #
-# Copyright 2017 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2019 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

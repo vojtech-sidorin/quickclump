@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Quickclump - identify clumps within a 3D FITS datacube.
 #
-# Copyright 2017 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2019 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
