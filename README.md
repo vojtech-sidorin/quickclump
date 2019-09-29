@@ -7,8 +7,8 @@ Identify clumps within a 3D FITS datacube.
 GitHub: <https://github.com/vojtech-sidorin/quickclump>  
 Direct download link (GitHub):
 [quickclump-master.zip](https://github.com/vojtech-sidorin/quickclump/archive/master.zip)  
-Web: <http://galaxy.asu.cas.cz/~vosidorin/pages/quickclump>  
-ASCL: <http://ascl.net/1704.006>
+Web: <https://astro.troja.mff.cuni.cz/vosidorin/pages/quickclump>  
+ASCL: <https://ascl.net/1704.006>
 
 ## Quick start guide
 
