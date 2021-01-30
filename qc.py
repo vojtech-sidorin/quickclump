@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Quickclump - identify clumps within a 3D FITS datacube.
 #
-# Copyright 2019 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2021 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ For more information, see README.md.
 
 
 # Semantic versioning; see <http://semver.org/>.
-__version__ = "1.4.1"
+__version__ = "1.4.2"
 
 import argparse
 from collections import deque
@@ -58,8 +58,10 @@ except ImportError:
     try:
         import pyfits as fits
     except ImportError:
-        sys.exit("Error: Cannot find any supported FITS IO package.  "
-                 "Have you installed 'astropy' or 'pyfits'?")
+        sys.exit(
+            "Error: Cannot find any supported FITS IO package.  "
+            "Have you installed 'astropy' or 'pyfits'?"
+        )
 import numpy as np
 
 # Global settings.
@@ -69,12 +71,14 @@ VERBOSE_LOGLEVEL = "DEBUG"
 SILENT_LOGLEVEL = "CRITICAL"
 # Relative map of a pixel's neighbourhood.
 # pragma pylint: disable=bad-whitespace
-PIXEL_NEIGHBOURHOOD = (( 0,  0, +1),
-                       ( 0,  0, -1),
-                       ( 0, +1,  0),
-                       ( 0, -1,  0),
-                       (+1,  0,  0),
-                       (-1,  0,  0))
+PIXEL_NEIGHBOURHOOD = (
+    (0, 0, +1),
+    (0, 0, -1),
+    (0, +1, 0),
+    (0, -1, 0),
+    (+1, 0, 0),
+    (-1, 0, 0),
+)
 # pragma pylint: enable=bad-whitespace
 
 # Set a global logger.
@@ -157,71 +161,72 @@ def _main(argv=None):
 def parse_args(argv=None):
     """Parse arguments."""
     parser = argparse.ArgumentParser(
-        description="Identifies clumps within a 3D FITS datacube.")
+        description="Identifies clumps within a 3D FITS datacube."
+    )
     parser.add_argument("ifits", help="FITS file where to search for clumps.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
         "--dTleaf",
         type=float,
         help="Minimal depth of a valley separating adjacent clumps.  Clumps "
-             "separated by a valley that is shallower will be merged "
-             "together.  Must be > 0.  (default: 3*sig_noise)"
-        )
+        "separated by a valley that is shallower will be merged "
+        "together.  Must be > 0.  (default: 3*sig_noise)",
+    )
     parser.add_argument(
         "--Tcutoff",
         type=float,
         help="Minimal data value to consider.  Pixels with lower values won't "
-             "be processed.  Must be > 0.  (default: 3*sig_noise)"
-        )
+        "be processed.  Must be > 0.  (default: 3*sig_noise)",
+    )
     parser.add_argument(
         "--Npxmin",
         type=int,
         default=DEFAULT_NPXMIN,
         help="Minimal size of a clump in pixels.  Smaller clumps will be "
-             "either merged to an adjacent clumps or deleted.  "
-             "(default: %(default)s)"
-        )
+        "either merged to an adjacent clumps or deleted.  "
+        "(default: %(default)s)",
+    )
     parser.add_argument(
         "--ofits",
         help="FITS file where the found clumps will be saved.  If OFITS "
-             "exists, it will be overwritten.  If set to 'None' (case doesn't "
-             "matter), OFITS file won't be written.  "
-             "(default: ifits with modified extension '.clumps.fits')"
-        )
+        "exists, it will be overwritten.  If set to 'None' (case doesn't "
+        "matter), OFITS file won't be written.  "
+        "(default: ifits with modified extension '.clumps.fits')",
+    )
     parser.add_argument(
         "--otext",
         help="Text file where the found clumps will be saved in a "
-             "human-readable form.  If OTEXT exists, it will be overwritten.  "
-             "If set to 'None' (case insensitive), OTEXT file won't be "
-             "written.  This will speed up the program's execution.  On the "
-             "other hand, the OTEXT file is needed for the construction of a "
-             "dendrogram.  (default: ifits with modified extension "
-             "'.clumps.txt')")
+        "human-readable form.  If OTEXT exists, it will be overwritten.  "
+        "If set to 'None' (case insensitive), OTEXT file won't be "
+        "written.  This will speed up the program's execution.  On the "
+        "other hand, the OTEXT file is needed for the construction of a "
+        "dendrogram.  (default: ifits with modified extension "
+        "'.clumps.txt')",
+    )
     parser.add_argument(
         "--loglevel",
         dest="loglevel",
         choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
         help="Threshold determining which types of messages will be shown. "
-             "Only messages with severity greater than or equal to a given "
-             "level will be shown. (default: %(default)s)",
-        default=DEFAULT_LOGLEVEL
-        )
+        "Only messages with severity greater than or equal to a given "
+        "level will be shown. (default: %(default)s)",
+        default=DEFAULT_LOGLEVEL,
+    )
     parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_const",
         const=VERBOSE_LOGLEVEL,
         dest="loglevel",
-        help="Increase verbosity. (Set loglevel to {0}.)"
-             "".format(VERBOSE_LOGLEVEL)
-        )
+        help="Increase verbosity. (Set loglevel to {0}.)" "".format(VERBOSE_LOGLEVEL),
+    )
     parser.add_argument(
         "--silent",
         action="store_const",
         const=SILENT_LOGLEVEL,
         dest="loglevel",
-        help="Decrease verbosity. (Set loglevel to {0}.)"
-             "".format(SILENT_LOGLEVEL)
-        )
+        help="Decrease verbosity. (Set loglevel to {0}.)" "".format(SILENT_LOGLEVEL),
+    )
     args = parser.parse_args(argv)
     LOGGER.setLevel(args.loglevel)
     return args
@@ -243,12 +248,13 @@ def load_idata(ifits):
 
     # Check if idata is 3D, i.e. has exactly 3 dimensions.
     if idata.ndim != 3:
-        raise InputDataError("The input FITS file must contain 3D data (in "
-                             "the first HDU), found {0}-dimensional data."
-                             .format(idata.ndim))
+        raise InputDataError(
+            "The input FITS file must contain 3D data (in "
+            "the first HDU), found {0}-dimensional data.".format(idata.ndim)
+        )
 
     # Add boundary to idata.
-    idata2 = np.empty(np.array(idata.shape)+2, dtype=idata.dtype)
+    idata2 = np.empty(np.array(idata.shape) + 2, dtype=idata.dtype)
     idata2[:] = -np.inf
     idata2[1:-1, 1:-1, 1:-1] = idata
     idata = idata2
@@ -308,8 +314,10 @@ def set_defaults(options, idata):
 
     # dTleaf/Tcutoff -- 3*sig_noise
     if (new_options.dTleaf is None) or (new_options.Tcutoff is None):
-        LOGGER.debug("Options dTleaf and/or Tcutoff was not set. "
-                     "Estimating from the input data.")
+        LOGGER.debug(
+            "Options dTleaf and/or Tcutoff was not set. "
+            "Estimating from the input data."
+        )
 
         # Compute data mean and std.
         valid = idata.view(np.ma.MaskedArray)
@@ -320,29 +328,36 @@ def set_defaults(options, idata):
 
         # Compute noise mean and std.
         noise = idata.view(np.ma.MaskedArray)
-        noise.mask = (~np.isfinite(idata)) | (idata > 3.*std_data)
+        noise.mask = (~np.isfinite(idata)) | (idata > 3.0 * std_data)
         # NOTE: Numpy's std() takes memory of ~6 times idata size.
         std_noise = noise.std()
         del noise  # No longer needed: delete the reference
 
         # Check if estimation of std_noise succeeded.
-        if (not np.isfinite(std_noise)) or (std_noise <= 0.):
+        if (not np.isfinite(std_noise)) or (std_noise <= 0.0):
             raise OutOfBoundsError(
                 "Estimation of std_noise from input data failed.  "
                 "Got value '{0}'.  "
-                "Is the input FITS data valid/reasonable?".format(std_noise))
+                "Is the input FITS data valid/reasonable?".format(std_noise)
+            )
 
         # Set dTleaf.
         if new_options.dTleaf is None:
-            LOGGER.debug("Setting dTleaf to %f (= 3*std_noise = 3*%f)",
-                         3.*std_noise, std_noise)
-            new_options.dTleaf = 3.*std_noise
+            LOGGER.debug(
+                "Setting dTleaf to %f (= 3*std_noise = 3*%f)",
+                3.0 * std_noise,
+                std_noise,
+            )
+            new_options.dTleaf = 3.0 * std_noise
 
         # Set Tcutoff.
         if new_options.Tcutoff is None:
-            LOGGER.debug("Setting Tcutoff to %f (= 3*std_noise = 3*%f)",
-                         3.*std_noise, std_noise)
-            new_options.Tcutoff = 3.*std_noise
+            LOGGER.debug(
+                "Setting Tcutoff to %f (= 3*std_noise = 3*%f)",
+                3.0 * std_noise,
+                std_noise,
+            )
+            new_options.Tcutoff = 3.0 * std_noise
 
     return new_options
 
@@ -351,12 +366,14 @@ def check_options(options):
     """Check values of dTleaf and Tcutoff."""
     assert hasattr(options, "dTleaf")
     assert hasattr(options, "Tcutoff")
-    if not options.dTleaf > 0.:
-        raise OutOfBoundsError("'dTleaf' must be > 0. It is {0}."
-                               .format(options.dTleaf))
-    if not options.Tcutoff > 0.:
-        raise OutOfBoundsError("'Tcutoff' must be > 0. It is {0}."
-                               .format(options.Tcutoff))
+    if not options.dTleaf > 0.0:
+        raise OutOfBoundsError(
+            "'dTleaf' must be > 0. It is {0}.".format(options.dTleaf)
+        )
+    if not options.Tcutoff > 0.0:
+        raise OutOfBoundsError(
+            "'Tcutoff' must be > 0. It is {0}.".format(options.Tcutoff)
+        )
 
 
 def find_all_clumps(idata, clmask, clumps, options):
@@ -411,8 +428,11 @@ def find_all_clumps(idata, clmask, clumps, options):
         px = Pixel(px_key, dval)
 
         # Find neighbours (clumps touching at this pixel)
-        neighbours = sorted(px.get_neighbours(clmask, clumps),
-                            key=lambda clump: clump.dpeak, reverse=True)
+        neighbours = sorted(
+            px.get_neighbours(clmask, clumps),
+            key=lambda clump: clump.dpeak,
+            reverse=True,
+        )
 
         if not neighbours:
             # No neighbour --> Make a new clump
@@ -476,8 +496,11 @@ def find_all_clumps(idata, clmask, clumps, options):
             # should be rejected, e.g. because of having too little pixels,
             # that side should rather be merged to the other side than be
             # deleted.
-            root_parents = sorted(px.get_root_parents(neighbours),
-                                  key=lambda clump: clump.dpeak, reverse=True)
+            root_parents = sorted(
+                px.get_root_parents(neighbours),
+                key=lambda clump: clump.dpeak,
+                reverse=True,
+            )
             for i in range(1, len(root_parents)):
                 root_parent = root_parents[i]
                 root_parent.parent = root_parents[0]
@@ -568,26 +591,23 @@ def write_ofits(ofits, clmask, final_clumps_count, options):
     ohdu.header["BUNIT"] = ("Ncl", "clump number")
     ohdu.header["DATE"] = (
         datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S UTC"),
-        "file creation date"
-        )
-    ohdu.header["COMMENT"] = ("File created by Quickclump {v}."
-                              .format(v=__version__))
-    ohdu.header["COMMENT"] = ("Original data file: '{ifits}'"
-                              .format(ifits=os.path.basename(options.ifits)))
-    ohdu.header["COMMENT"] = ("Quickclump was run with following parameters:")
-    ohdu.header["COMMENT"] = ("  dTleaf={dTleaf:.12g}"
-                              .format(dTleaf=options.dTleaf))
-    ohdu.header["COMMENT"] = ("  Tcutoff={Tcutoff:.12g}"
-                              .format(Tcutoff=options.Tcutoff))
-    ohdu.header["COMMENT"] = ("  Npxmin={Npxmin}".format(Npxmin=options.Npxmin))
-    ohdu.header["COMMENT"] = ("Total clumps found: {fcc}"
-                              .format(fcc=final_clumps_count))
+        "file creation date",
+    )
+    ohdu.header["COMMENT"] = "File created by Quickclump {v}.".format(v=__version__)
+    ohdu.header["COMMENT"] = "Original data file: '{ifits}'".format(
+        ifits=os.path.basename(options.ifits)
+    )
+    ohdu.header["COMMENT"] = "Quickclump was run with following parameters:"
+    ohdu.header["COMMENT"] = "  dTleaf={dTleaf:.12g}".format(dTleaf=options.dTleaf)
+    ohdu.header["COMMENT"] = "  Tcutoff={Tcutoff:.12g}".format(Tcutoff=options.Tcutoff)
+    ohdu.header["COMMENT"] = "  Npxmin={Npxmin}".format(Npxmin=options.Npxmin)
+    ohdu.header["COMMENT"] = "Total clumps found: {fcc}".format(fcc=final_clumps_count)
     ohdu.header["COMMENT"] = (
         "This FITS file is a mask for the original data file '{ifits}'. "
         "Each pixel contains an integer that corresponds to the label of the "
         "clump that owns the pixel. Pixels marked with zeroes belong to no "
         "clump.".format(ifits=os.path.basename(options.ifits))
-        )
+    )
 
     # Write the output FITS.
     if os.path.exists(ofits):
@@ -614,9 +634,10 @@ def write_otext(otext, clumps, options):
         # Output the header line.
         # NOTE: The Nlevels value is set to 1000 only for the output to be
         # compatible with DENDROFIND.  It has no meaning for Quickclump.
-        f.write("# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
-                "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n"
-                .format(options=options))
+        f.write(
+            "# Nlevels = 1000 Tcutoff = {options.Tcutoff:.12g} dTleaf = "
+            "{options.dTleaf:.12g} Npxmin = {options.Npxmin}\n".format(options=options)
+        )
         # Output the clumps.
         for clump in clumps:
             # Output only clumps that were not rejected (final_ncl is not None)
@@ -636,10 +657,12 @@ class OutOfBoundsError(Exception):
 
 class PixelLike(object):
     """Base class for pixel-like objects."""
+
     xyz = None
+
     def dist2(self, other):
         """Return square of the distance to other object."""
-        return ((self.xyz-other.xyz)**2).sum()
+        return ((self.xyz - other.xyz) ** 2).sum()
 
 
 class Clump(PixelLike):
@@ -732,8 +755,9 @@ class Clump(PixelLike):
         assert not self.merged, "Attempt to merge already merged clump."
         assert not parent.merged, "Attempt to merge to merged clump."
         parent.pixels.extend(self.pixels)
-        parent.xyz = ((parent.wxyz*parent.xyz + self.wxyz*self.xyz)/
-                      (parent.wxyz + self.wxyz))
+        parent.xyz = (parent.wxyz * parent.xyz + self.wxyz * self.xyz) / (
+            parent.wxyz + self.wxyz
+        )
         parent.wxyz += self.wxyz
         for clump, touching_at_dval in self.touching.items():
             parent.update_touching(clump, touching_at_dval)
@@ -750,8 +774,7 @@ class Clump(PixelLike):
         """
         exp_other = other.merger
         if exp_other is not self:
-            if ((exp_other not in self.touching) or
-                    (dval > self.touching[exp_other])):
+            if (exp_other not in self.touching) or (dval > self.touching[exp_other]):
                 self.touching.update({exp_other: dval})
 
     def compact_touching(self):
@@ -771,8 +794,9 @@ class Clump(PixelLike):
                 continue
             elif exp_clump is self:
                 continue
-            elif ((exp_clump not in new_touching) or
-                  (touching_at_dval > new_touching[exp_clump])):
+            elif (exp_clump not in new_touching) or (
+                touching_at_dval > new_touching[exp_clump]
+            ):
                 new_touching.update({exp_clump: touching_at_dval})
         self.touching = new_touching
 
@@ -811,8 +835,9 @@ class Clump(PixelLike):
             next_clump = queue.popleft()  # Breadth-first traversal.
             focused_clump = next_clump[0]
             focused_valley = next_clump[1]
-            assert not focused_clump.merged, \
-                "Only expanded clumps are expected in the queue."
+            assert (
+                not focused_clump.merged
+            ), "Only expanded clumps are expected in the queue."
             if focused_clump.connected:
                 # Reuse what has been already discovered.
                 for child, child_valley in focused_clump.connected.items():
@@ -845,8 +870,7 @@ class Clump(PixelLike):
     def add_px(self, px):
         """Add pixel to the clump."""
         self.pixels.append(px)
-        self.xyz = ((px.dval*px.xyz + self.wxyz*self.xyz)/
-                    (px.dval + self.wxyz))
+        self.xyz = (px.dval * px.xyz + self.wxyz * self.xyz) / (px.dval + self.wxyz)
         self.wxyz += px.dval
 
     def __str__(self):
@@ -870,21 +894,24 @@ class Clump(PixelLike):
         connected.sort(key=lambda x: (-x[1], x[0].final_ncl))
 
         # Sort list of pixels (order by dval, k, j, i).
-        self.pixels.sort(key=lambda px:
-                         (-px.dval, px.ijk[2], px.ijk[1], px.ijk[0]))
+        self.pixels.sort(key=lambda px: (-px.dval, px.ijk[2], px.ijk[1], px.ijk[0]))
 
         # Generate str_ to be returned.
-        str_ = ["clump: {final_ncl}\n"
-                "  Npx: {Npx}\n"
-                "  Tmax: {Tmax:.12g}\n"
-                "  state: independent\n"
-                "  Ntouching: {Ntouching}\n"
-                "  Nconnected: {Nconnected}\n"
-                "".format(final_ncl=self.final_ncl,
-                          Npx=self.npx,
-                          Tmax=float(self.dpeak),
-                          Ntouching=len(touching),
-                          Nconnected=len(connected))]
+        str_ = [
+            "clump: {final_ncl}\n"
+            "  Npx: {Npx}\n"
+            "  Tmax: {Tmax:.12g}\n"
+            "  state: independent\n"
+            "  Ntouching: {Ntouching}\n"
+            "  Nconnected: {Nconnected}\n"
+            "".format(
+                final_ncl=self.final_ncl,
+                Npx=self.npx,
+                Tmax=float(self.dpeak),
+                Ntouching=len(touching),
+                Nconnected=len(connected),
+            )
+        ]
         # NOTE: FITS IO reverses the order of coordinates, therefore we
         # output 2-1-0.
         # NOTE: Coordinates in FITS start from 1 and because arrays clmask
@@ -892,17 +919,29 @@ class Clump(PixelLike):
         # data, these two shifts cancel each other out and we can
         # output ijk directly.
         str_.append("  pixels:\n")
-        str_.extend(["    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval:.12g}\n"
-                     "".format(ijk=px.ijk, dval=float(px.dval))
-                     for px in self.pixels])
+        str_.extend(
+            [
+                "    {ijk[2]:>3d} {ijk[1]:>3d} {ijk[0]:>3d} {dval:.12g}\n"
+                "".format(ijk=px.ijk, dval=float(px.dval))
+                for px in self.pixels
+            ]
+        )
         str_.append("  touching:\n")
-        str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
-                     "".format(final_ncl=t[0].final_ncl, dval=float(t[1]))
-                     for t in touching])
+        str_.extend(
+            [
+                "    {final_ncl:>3d} {dval:.12g}\n"
+                "".format(final_ncl=t[0].final_ncl, dval=float(t[1]))
+                for t in touching
+            ]
+        )
         str_.append("  connected:\n")
-        str_.extend(["    {final_ncl:>3d} {dval:.12g}\n"
-                     "".format(final_ncl=c[0].final_ncl, dval=float(c[1]))
-                     for c in connected])
+        str_.extend(
+            [
+                "    {final_ncl:>3d} {dval:.12g}\n"
+                "".format(final_ncl=c[0].final_ncl, dval=float(c[1]))
+                for c in connected
+            ]
+        )
 
         return "".join(str_)
 

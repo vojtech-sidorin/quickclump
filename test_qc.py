@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Tests for Quickclump.
 #
-# Copyright 2019 Vojtech Sidorin <vojtech.sidorin@gmail.com>
+# Copyright 2021 Vojtech Sidorin <vojtech.sidorin@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import tempfile
 import unittest
 
 import numpy as np
+
 # Import FITS IO.
 # NOTE: PyFITS was merged into Astropy.
 try:
@@ -31,8 +32,10 @@ except ImportError:
     try:
         import pyfits as fits
     except ImportError:
-        sys.exit("Error: Cannot find any supported FITS IO package.  "
-                 "Have you installed 'astropy' or 'pyfits'?")
+        sys.exit(
+            "Error: Cannot find any supported FITS IO package.  "
+            "Have you installed 'astropy' or 'pyfits'?"
+        )
 
 import qc
 
@@ -48,48 +51,41 @@ class TestParseArgs(unittest.TestCase):
     # the expected values must be found in the namespace returned by
     # function parse_args.
     ARGS_MAP = [
-        ["file.fits",
-         {
-             "ifits": "file.fits",
-             "dTleaf": None,
-             "Tcutoff": None,
-             "Npxmin": qc.DEFAULT_NPXMIN,
-             "ofits": None,
-             "otext": None,
-             "loglevel": qc.DEFAULT_LOGLEVEL
-             }
+        [
+            "file.fits",
+            {
+                "ifits": "file.fits",
+                "dTleaf": None,
+                "Tcutoff": None,
+                "Npxmin": qc.DEFAULT_NPXMIN,
+                "ofits": None,
+                "otext": None,
+                "loglevel": qc.DEFAULT_LOGLEVEL,
+            },
         ],
-        ["file.fits --dTleaf 1.234 --Tcutoff 2.345 --Npxmin 3 "
-         "--ofits out.fits --otext clumps.txt -v",
-         {
-             "ifits": "file.fits",
-             "dTleaf": 1.234,
-             "Tcutoff": 2.345,
-             "Npxmin": 3,
-             "ofits": "out.fits",
-             "otext": "clumps.txt",
-             "loglevel": "DEBUG"
-             }
+        [
+            "file.fits --dTleaf 1.234 --Tcutoff 2.345 --Npxmin 3 "
+            "--ofits out.fits --otext clumps.txt -v",
+            {
+                "ifits": "file.fits",
+                "dTleaf": 1.234,
+                "Tcutoff": 2.345,
+                "Npxmin": 3,
+                "ofits": "out.fits",
+                "otext": "clumps.txt",
+                "loglevel": "DEBUG",
+            },
         ],
-        ["file.fits --loglevel CRITICAL -vvv --loglevel WARNING",
-         {
-             "ifits": "file.fits",
-             "loglevel": "WARNING"
-             }
+        [
+            "file.fits --loglevel CRITICAL -vvv --loglevel WARNING",
+            {"ifits": "file.fits", "loglevel": "WARNING"},
         ],
-        ["file.fits -v --loglevel ERROR -v",
-         {
-             "ifits": "file.fits",
-             "loglevel": qc.VERBOSE_LOGLEVEL
-             }
+        [
+            "file.fits -v --loglevel ERROR -v",
+            {"ifits": "file.fits", "loglevel": qc.VERBOSE_LOGLEVEL},
         ],
-        ["file.fits --silent",
-         {
-             "ifits": "file.fits",
-             "loglevel": qc.SILENT_LOGLEVEL
-             }
-        ]
-        ]
+        ["file.fits --silent", {"ifits": "file.fits", "loglevel": qc.SILENT_LOGLEVEL}],
+    ]
 
     def test_correct_args(self):
         for args, expected in self.ARGS_MAP:
@@ -102,13 +98,17 @@ class TestParseArgs(unittest.TestCase):
 class TestLoadIdata(unittest.TestCase):
     """Test function load_idata."""
 
-    NON_3D_FITS = [os.path.join(SAMPLE_FILES_DIR, "1d.fits"),
-                   os.path.join(SAMPLE_FILES_DIR, "2d.fits"),
-                   os.path.join(SAMPLE_FILES_DIR, "4d.fits")]
+    NON_3D_FITS = [
+        os.path.join(SAMPLE_FILES_DIR, "1d.fits"),
+        os.path.join(SAMPLE_FILES_DIR, "2d.fits"),
+        os.path.join(SAMPLE_FILES_DIR, "4d.fits"),
+    ]
 
-    THREE_DIM_FITS = [os.path.join(SAMPLE_FILES_DIR, "3d.fits"),
-                      os.path.join(SAMPLE_FILES_DIR, "rand_normal.fits"),
-                      os.path.join(SAMPLE_FILES_DIR, "rand_uniform.fits")]
+    THREE_DIM_FITS = [
+        os.path.join(SAMPLE_FILES_DIR, "3d.fits"),
+        os.path.join(SAMPLE_FILES_DIR, "rand_normal.fits"),
+        os.path.join(SAMPLE_FILES_DIR, "rand_uniform.fits"),
+    ]
 
     def test_non_3d_fits(self):
         for filename in self.NON_3D_FITS:
@@ -182,7 +182,9 @@ class TestCheckOptions(unittest.TestCase):
     """Test function check_options."""
 
     def setUp(self):
-        class Empty(object): pass
+        class Empty(object):
+            pass
+
         self.options = Empty()
 
     def test_missing_options(self):
@@ -191,42 +193,38 @@ class TestCheckOptions(unittest.TestCase):
         # Missing any required option.
         required_options = ("dTleaf", "Tcutoff")
         for option in required_options:
-            setattr(self.options, option, 1.)
+            setattr(self.options, option, 1.0)
             self.assertRaises(AssertionError, qc.check_options, self.options)
             delattr(self.options, option)
 
     def test_correct_values(self):
-        correct_values = [1, 1., 0.1, 257, 257., 1e2, int(1e215), float("inf")]
+        correct_values = [1, 1.0, 0.1, 257, 257.0, 1e2, int(1e215), float("inf")]
         for self.options.Tcutoff in correct_values:
             for self.options.dTleaf in correct_values:
                 self.assertIsNone(qc.check_options(self.options))
 
     def test_incorrect_values(self):
-        correct_value = 1.
-        incorrect_values = [-1, -1., -1e2, float("-inf"), float("nan")]
+        correct_value = 1.0
+        incorrect_values = [-1, -1.0, -1e2, float("-inf"), float("nan")]
         # Correct Tcutoff & incorrect dTleaf.
         self.options.Tcutoff = correct_value
         for self.options.dTleaf in incorrect_values:
-            self.assertRaises(qc.OutOfBoundsError, qc.check_options,
-                              self.options)
+            self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
         # Correct dTleaf & incorrect Tcutoff.
         self.options.dTleaf = correct_value
         for self.options.Tcutoff in incorrect_values:
-            self.assertRaises(qc.OutOfBoundsError, qc.check_options,
-                              self.options)
+            self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
         # Incorrect both.
         for self.options.Tcutoff in incorrect_values:
             for self.options.dTleaf in incorrect_values:
-                self.assertRaises(qc.OutOfBoundsError, qc.check_options,
-                                  self.options)
+                self.assertRaises(qc.OutOfBoundsError, qc.check_options, self.options)
 
 
 class TestRegression(unittest.TestCase):
     """Regression test: Test if the program produces expected output."""
 
     # Use these sample input FITS files. (Prefixes without the .fits extension.)
-    SAMPLE_IFITS_PREFIXES = ["rand_normal",
-                             "rand_uniform"]
+    SAMPLE_IFITS_PREFIXES = ["rand_normal", "rand_uniform"]
 
     def setUp(self):
         # Test outputs will be stored in this tmp dir.
@@ -243,9 +241,11 @@ class TestRegression(unittest.TestCase):
             ifits = os.path.join(SAMPLE_FILES_DIR, f + ".fits")
             result_ofits = os.path.join(self.tmpd, f + ".clumps.fits")
             result_otext = os.path.join(self.tmpd, f + ".clumps.txt")
-            qc.main("--ofits {ofits} --otext {otext} {ifits} --silent"
-                    .format(ofits=result_ofits, otext=result_otext, ifits=ifits)
-                    .split())
+            qc.main(
+                "--ofits {ofits} --otext {otext} {ifits} --silent".format(
+                    ofits=result_ofits, otext=result_otext, ifits=ifits
+                ).split()
+            )
 
             # Compare FITS results.
             expected_ofits = os.path.join(SAMPLE_FILES_DIR, f + ".clumps.fits")
@@ -256,10 +256,13 @@ class TestRegression(unittest.TestCase):
                 result_odata = h[0].data
                 result_header = h[0].header
             # ... data.
-            self.assertEqual(list(expected_odata.flatten()),
-                             list(result_odata.flatten()),
-                             msg="Data in FITS files '{0}' and '{1}' differ."
-                             .format(expected_ofits, result_ofits))
+            self.assertEqual(
+                list(expected_odata.flatten()),
+                list(result_odata.flatten()),
+                msg="Data in FITS files '{0}' and '{1}' differ.".format(
+                    expected_ofits, result_ofits
+                ),
+            )
             # ... header.
             # Before comparison, remove the card DATE from the header.  This
             # card will contain a timestamp of the file creation and should be
@@ -274,9 +277,11 @@ class TestRegression(unittest.TestCase):
                 expected_otext_contents = g.read()
             with open(result_otext, "rb") as h:
                 result_otext_contents = h.read()
-            self.assertEqual(expected_otext_contents, result_otext_contents,
-                             msg="Files '{0}' and {1} differ."
-                             .format(expected_otext, result_otext))
+            self.assertEqual(
+                expected_otext_contents,
+                result_otext_contents,
+                msg="Files '{0}' and {1} differ.".format(expected_otext, result_otext),
+            )
 
 
 if __name__ == "__main__":
