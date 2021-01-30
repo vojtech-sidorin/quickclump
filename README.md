@@ -8,7 +8,8 @@ GitHub: <https://github.com/vojtech-sidorin/quickclump>
 Direct download link (GitHub):
 [quickclump-master.zip](https://github.com/vojtech-sidorin/quickclump/archive/master.zip)  
 Web: <https://astro.troja.mff.cuni.cz/vosidorin/pages/quickclump>  
-ASCL: <https://ascl.net/1704.006>
+ASCL: <https://ascl.net/1704.006>  
+Documentation: <https://is.cuni.cz/webapps/zzp/download/140054878> (in Chapter 3)
 
 ## Quick start guide
 
